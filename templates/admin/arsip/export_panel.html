@@ -1,0 +1,54 @@
+<style>
+  .exp-panel { margin-bottom: 1rem; padding: 1rem; border: 1px solid rgba(148,163,184,.35); border-radius: .75rem; }
+  .exp-panel h3 { margin: 0 0 .75rem; font-size: .95rem; font-weight: 600; }
+  .exp-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem; }
+  .exp-form label { display: block; margin-bottom: .3rem; font-size: .75rem; opacity: .7; }
+  .exp-form select, .exp-form input {
+    min-width: 11rem; padding: .5rem .75rem; font-size: .875rem; color: inherit;
+    background: transparent; border: 1px solid rgba(148,163,184,.5); border-radius: .5rem;
+  }
+  .exp-form option { color: #111827; background: #ffffff; }
+  .exp-form button {
+    padding: .55rem 1.1rem; font-size: .875rem; font-weight: 600; color: #fff; cursor: pointer;
+    background: #2563eb; border: 0; border-radius: .5rem;
+  }
+  .exp-form button:hover { background: #1d4ed8; }
+  .exp-note { margin: .6rem 0 0; font-size: .75rem; opacity: .6; }
+</style>
+
+<div class="exp-panel">
+  <h3>Export Excel (Daftar Isi Berkas)</h3>
+  <form method="get" action="{% url 'arsip_export' %}" class="exp-form">
+    <div>
+      <label for="exp-bagian">Bagian</label>
+      <select name="bagian" id="exp-bagian" onchange="document.getElementById('exp-susunan-box').style.display = this.value === 'semua' ? '' : 'none'">
+        <option value="semua">Semua bagian</option>
+        {% for u in export_units %}<option value="{{ u.pk }}">{{ u.nama }}</option>{% endfor %}
+      </select>
+    </div>
+    <div id="exp-susunan-box">
+      <label for="exp-susunan">Susunan semua bagian</label>
+      <select name="susunan" id="exp-susunan">
+        <option value="gabung">Digabung jadi satu daftar</option>
+        <option value="terpisah">Dipisah per bagian</option>
+      </select>
+    </div>
+    <div>
+      <label for="exp-dari">Dari bulan</label>
+      <input type="month" name="dari" id="exp-dari" value="{{ export_dari }}">
+    </div>
+    <div>
+      <label for="exp-sampai">Sampai bulan</label>
+      <input type="month" name="sampai" id="exp-sampai" value="{{ export_sampai }}">
+    </div>
+    <div>
+      <label for="exp-mode">Format</label>
+      <select name="mode" id="exp-mode">
+        <option value="per_bulan">Satu tab per bulan</option>
+        <option value="gabung">Semua bulan dalam satu tab</option>
+      </select>
+    </div>
+    <button type="submit">Export Excel</button>
+  </form>
+  <p class="exp-note">Isi file tidak terpengaruh filter dan pencarian di bawah, hanya pilihan di kotak ini.</p>
+</div>

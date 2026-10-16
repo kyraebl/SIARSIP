@@ -1,0 +1,100 @@
+<div class="mb-2 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 text-xs text-slate-800">
+  <p role="status">{% if jumlah is not None %}<span class="font-semibold tabular-nums text-slate-900">{{ jumlah }}</span> arsip ditampilkan{% endif %}</p>
+  <ul class="flex flex-wrap gap-x-4 gap-y-1" aria-label="Keterangan warna baris">
+    <li class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-sm border border-amber-300 bg-amber-50" aria-hidden="true"></span>Nomor surat belum keluar</li>
+    <li class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-sm border border-sky-300 bg-sky-50" aria-hidden="true"></span>Soft file belum diunggah</li>
+  </ul>
+</div>
+
+<div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+  <table class="min-w-full text-sm">
+    <caption class="sr-only">Daftar isi berkas arsip, dikelompokkan per kategori klasifikasi</caption>
+    <thead class="border-b border-slate-300 bg-slate-200 text-xs text-slate-900">
+      <tr class="text-center">
+        <th scope="col" class="th">No. berkas</th>
+        <th scope="col" class="th">No. item</th>
+        <th scope="col" class="th">Kode klasifikasi</th>
+        <th scope="col" class="th text-left">Uraian informasi</th>
+        <th scope="col" class="th">Tanggal</th>
+        <th scope="col" class="th">Jumlah</th>
+        <th scope="col" class="th">Keterangan</th>
+        <th scope="col" class="th">Keamanan<span class="sr-only"> dan akses arsip</span></th>
+        {% if tampil_bagian %}<th scope="col" class="th">Bagian</th>{% endif %}
+        <th scope="col" class="th text-left">Catatan arsip</th>
+        <th scope="col" class="th">Berkas</th>
+        {% if not tanpa_aksi %}<th scope="col" class="th">Aksi</th>{% endif %}
+      </tr>
+    </thead>
+    <tbody class="align-top">
+      {% for g in grup %}
+      <tr>
+        <th scope="colgroup" colspan="{% if tampil_bagian %}{% if tanpa_aksi %}11{% else %}12{% endif %}{% else %}{% if tanpa_aksi %}10{% else %}11{% endif %}{% endif %}" class="border-b border-blue-100 bg-blue-50 px-4 py-2 text-left text-sm font-semibold text-blue-800">{{ g.kategori.nama|default:g.kategori.kode }}</th>
+      </tr>
+        {% for b in g.berkas %}
+          {% for no_item, a in b.baris %}
+          <tr class="{{ a.warna_baris }}">
+            {% if forloop.first %}
+            <td rowspan="{{ b.baris|length }}" class="td bg-white text-center align-top font-medium text-slate-900">{{ b.no }}</td>
+            {% endif %}
+            <td class="td text-center tabular-nums">{{ no_item }}</td>
+            {% if forloop.first %}
+            <td rowspan="{{ b.baris|length }}" class="td whitespace-nowrap bg-white text-center align-top font-semibold text-blue-700">{{ b.kode }}</td>
+            {% endif %}
+            <td class="td min-w-[14rem] max-w-sm text-slate-800">{{ a.uraian }}</td>
+            <td class="td whitespace-nowrap text-center">{{ a.tanggal|date:"d M Y" }}</td>
+            <td class="td whitespace-nowrap text-center">{{ a.jumlah_tampil }}</td>
+            <td class="td text-center">{{ a.get_keterangan_display }}</td>
+            <td class="td text-center">
+              <span class="whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium {% if a.keamanan == 'rahasia' %}bg-red-50 text-red-700{% elif a.keamanan == 'terbatas' %}bg-amber-50 text-amber-800{% else %}bg-emerald-50 text-emerald-700{% endif %}">{{ a.get_keamanan_display }}</span>
+            </td>
+            {% if tampil_bagian %}<td class="td whitespace-nowrap text-center">{{ a.unit_kerja.singkatan }}</td>{% endif %}
+            <td class="td min-w-[11rem]">
+              {% for kode, teks in a.catatan %}
+              <span class="mb-1 block w-fit whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium {% if kode == 'nomor' %}bg-amber-200 text-amber-900{% else %}bg-sky-200 text-sky-900{% endif %}">{{ teks }}</span>
+              {% empty %}
+              <span class="whitespace-nowrap text-xs font-medium text-emerald-700">Lengkap</span>
+              {% endfor %}
+            </td>
+            <td class="td whitespace-nowrap text-center">
+              {% if a.berkas %}
+              <a href="{% url 'arsip_berkas' a.pk %}" target="_blank" rel="noopener"
+                 class="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 font-medium text-blue-700 transition-colors hover:bg-blue-50">
+                <svg class="h-4 w-4" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+                Lihat<span class="sr-only"> berkas PDF (tab baru)</span>
+              </a>
+              {% else %}
+              <span class="text-slate-500" aria-hidden="true">-</span><span class="sr-only">Belum ada berkas</span>
+              {% endif %}
+            </td>
+            {% if not tanpa_aksi %}
+            <td class="td whitespace-nowrap">
+              <div class="-my-2 flex items-center justify-center gap-1">
+                <button type="button" title="Ubah" aria-label="Ubah arsip"
+                        hx-get="{% url 'arsip_ubah' a.pk %}" hx-target="#modal-root"
+                        class="rounded-lg p-2 text-emerald-700 transition-colors hover:bg-emerald-50 hover:text-emerald-800">
+                  <svg class="h-5 w-5" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
+                </button>
+                <form method="post" action="{% url 'arsip_hapus' a.pk %}" onsubmit="return confirm('Hapus arsip ini?')">
+                  {% csrf_token %}
+                  <button title="Hapus" aria-label="Hapus arsip"
+                          class="rounded-lg p-2 text-red-600 transition-colors hover:bg-red-50 hover:text-red-700">
+                    <svg class="h-5 w-5" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                  </button>
+                </form>
+              </div>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        {% endfor %}
+      {% empty %}
+      <tr>
+        <td colspan="{% if tampil_bagian %}{% if tanpa_aksi %}11{% else %}12{% endif %}{% else %}{% if tanpa_aksi %}10{% else %}11{% endif %}{% endif %}" class="px-4 py-14 text-center">
+          <p class="font-medium text-slate-700">Tidak ada arsip yang cocok</p>
+          <p class="mt-1 text-sm text-slate-800">Ubah kata kunci atau pilihan bulan, lalu coba lagi.</p>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

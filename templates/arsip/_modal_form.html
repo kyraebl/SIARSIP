@@ -1,0 +1,77 @@
+{{ tujuan_map|json_script:"tujuan-map" }}
+{{ kategori_map|json_script:"kategori-map" }}
+
+<div x-data="arsipForm()" x-trap.noscroll="true" @keydown.escape.window="close()" @click.self="close()"
+     x-init="$nextTick(() => $refs.form.querySelector('input:not([type=hidden]), select, textarea')?.focus())"
+     role="dialog" aria-modal="true" aria-labelledby="modal-judul"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+  <form method="post" hx-post="{{ request.path }}" hx-target="#modal-root" hx-disabled-elt="#btn-simpan"
+        enctype="multipart/form-data" hx-encoding="multipart/form-data"
+        x-ref="form" @input="update()" @change="update()" x-init="$nextTick(() => update())"
+        class="flex max-h-[92vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl">
+    {% csrf_token %}
+
+    <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+      <h2 id="modal-judul" class="text-lg font-semibold text-slate-900">{{ judul }}</h2>
+      <button type="button" @click="close()" aria-label="Tutup" class="-mr-2 rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700">
+        <svg class="h-5 w-5" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-5">
+      {% for e in form.non_field_errors %}<p role="alert" class="mb-3 text-sm text-red-700">{{ e }}</p>{% endfor %}
+      <div class="grid gap-4 sm:grid-cols-2">
+        {% if not bebas %}<div class="sm:col-span-2">{% include "arsip/_field.html" with f=form.kode_tujuan %}</div>{% endif %}
+        {% include "arsip/_field.html" with f=form.kategori %}
+        {% include "arsip/_field.html" with f=form.sub_kode %}
+        {% if not bebas %}{% include "arsip/_field.html" with f=form.nomor_surat %}{% endif %}
+        {% include "arsip/_field.html" with f=form.tanggal %}
+        <div class="sm:col-span-2">{% include "arsip/_field.html" with f=form.perihal %}</div>
+        <div class="sm:col-span-2">
+          {% include "arsip/_field.html" with f=form.berkas %}
+          {% if form.instance.pk and form.instance.berkas %}
+          <p class="mt-1 text-xs text-slate-600">Arsip ini sudah punya berkas.
+            <a href="{% url 'arsip_berkas' form.instance.pk %}" target="_blank" rel="noopener" class="font-medium text-blue-700 hover:underline">Lihat</a>.
+            Pilih file baru hanya jika ingin menggantinya.</p>
+          {% else %}
+          <p class="mt-1 text-xs text-slate-600">Opsional, format PDF maksimal {{ max_mb }} MB.</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label for="{{ form.jumlah.id_for_label }}" class="mb-1.5 block text-sm font-medium text-slate-700">Jumlah</label>
+          <div class="relative">
+            {{ form.jumlah }}
+            <span class="pointer-events-none absolute right-3 top-2 text-sm text-slate-500" aria-hidden="true">bks</span>
+          </div>
+          {% for e in form.jumlah.errors %}<p role="alert" class="mt-1 text-xs text-red-700">{{ e }}</p>{% endfor %}
+        </div>
+        {% include "arsip/_field.html" with f=form.keamanan %}
+
+        <fieldset class="sm:col-span-2">
+          <legend class="mb-1.5 text-sm font-medium text-slate-700">Keterangan</legend>
+          <div class="flex gap-3">
+            {% for r in form.keterangan %}
+            <label class="flex flex-1 cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-blue-300">
+              {{ r.tag }} {{ r.choice_label }}
+            </label>
+            {% endfor %}
+          </div>
+          {% for e in form.keterangan.errors %}<p role="alert" class="mt-1 text-xs text-red-700">{{ e }}</p>{% endfor %}
+        </fieldset>
+      </div>
+    </div>
+
+    <div class="border-t border-blue-100 bg-blue-50 px-6 py-3">
+      <p class="text-xs font-semibold uppercase tracking-wide text-blue-700">Live preview uraian</p>
+      <p class="mt-1 text-sm leading-relaxed text-slate-800" aria-live="off"
+         x-text="preview || '{% if bebas %}Isi uraian untuk melihat pratinjau.{% else %}Isi pejabat penandatanganan dan kategori untuk melihat hasil rangkaian uraian.{% endif %}'"></p>
+      <p class="mt-1 text-xs text-slate-600">Kode klasifikasi: <span class="font-semibold text-blue-700" x-text="kode || '-'"></span></p>
+    </div>
+
+    <div class="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+      <button type="button" @click="close()" class="btn border border-slate-300 bg-white font-medium text-slate-700 hover:bg-slate-50">Batal</button>
+      <button id="btn-simpan" type="submit" class="btn btn-primary disabled:opacity-60">Simpan</button>
+    </div>
+  </form>
+</div>

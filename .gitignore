@@ -1,0 +1,9 @@
+﻿.env
+venv/
+__pycache__/
+*.pyc
+private_media/
+master_data.json
+*.dump
+db.sqlite3
+client_secret*.json

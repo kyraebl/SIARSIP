@@ -1,0 +1,41 @@
+<div x-data="{ close() { document.getElementById('modal-root').innerHTML = '' } }"
+     @keydown.escape.window="close()" @click.self="close()"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+  <form method="post" enctype="multipart/form-data" hx-post="{% url 'arsip_import' %}"
+        hx-encoding="multipart/form-data" hx-target="#hasil-import" hx-indicator="#loading-import"
+        class="flex max-h-[92vh] w-full max-w-5xl flex-col rounded-2xl bg-white shadow-xl">
+    {% csrf_token %}
+
+    <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+      <h2 class="text-lg font-semibold text-slate-900">Import dari Excel</h2>
+      <button type="button" @click="close()" class="text-2xl leading-none text-slate-400 hover:text-slate-600">&times;</button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-5">
+      <div class="rounded-lg border border-blue-100 bg-blue-50/60 p-4 text-sm leading-relaxed text-slate-700">
+        <p>Unggah file Excel <span class="font-semibold">Daftar Isi Berkas</span> yang sudah ada. Semua tab (bulan) dibaca, dan arsip masuk ke unit <span class="font-semibold">{{ request.user.unit_kerja }}</span>.</p>
+        <ul class="mt-2 list-disc space-y-1 pl-5 text-slate-600">
+          <li>Kolom yang dibaca: Uraian Informasi, Tanggal, Jumlah, Keterangan, dan Ket. Klasifikasi Keamanan.</li>
+          <li>Uraian harus berbentuk <span class="font-medium">Surat ... No: HK0102-Aa/01 Hal ...</span>. Surat yang nomornya belum keluar ditandai kuning di tabel preview.</li>          
+          <li>Arsip yang sudah ada tidak diduplikasi, jadi file yang sama aman diimpor ulang.</li>
+          <li>Klik <span class="font-medium">Cek file</span> dulu. Data baru disimpan setelah lo menekan tombol impor.</li>
+        </ul>
+      </div>
+
+      <div class="mt-5">
+        <label for="id_file" class="mb-1.5 block text-sm font-medium text-slate-700">File Excel (.xlsx)</label>
+        <input id="id_file" type="file" name="file" accept=".xlsx" required
+               class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100">
+        <p class="mt-1 text-xs text-slate-400">Maksimal {{ max_mb }} MB.</p>
+      </div>
+
+      <p id="loading-import" class="htmx-indicator mt-4 text-sm text-slate-500">Memproses file, mohon tunggu...</p>
+      <div id="hasil-import" class="mt-5"></div>
+    </div>
+
+    <div class="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+      <button type="button" @click="close()" class="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Tutup</button>
+      <button type="submit" hx-disabled-elt="this" class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60">Cek file</button>
+    </div>
+  </form>
+</div>

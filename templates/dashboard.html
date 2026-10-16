@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · SIARSIP{% endblock %}
+{% block content %}
+<div class="mb-6">
+  <h1 class="text-2xl font-bold text-slate-900">Dashboard</h1>
+  <p class="mt-1 text-sm text-slate-800">Ringkasan arsip {{ request.user.unit_kerja|default:"semua unit" }}</p>
+</div>
+
+<dl class="grid gap-4 sm:grid-cols-2 lg:max-w-xl">
+  {% for label, value in stats %}
+  <div class="card px-5 py-4">
+    <dt class="text-sm text-slate-800">{{ label }}</dt>
+    <dd class="mt-1 text-3xl font-bold tabular-nums text-slate-900">{{ value }}</dd>
+  </div>
+  {% endfor %}
+</dl>
+
+<h2 class="mb-3 mt-6 text-lg font-semibold text-slate-900">Daftar Isi Berkas</h2>
+
+<form method="get" action="{% url 'dashboard' %}" x-data="{ bagian: '{{ bagian }}' }" class="card mb-5 divide-y divide-slate-300 border-slate-300 bg-slate-200">
+  <div class="flex flex-wrap items-end gap-4 p-4">
+    <div class="min-w-[14rem] grow basis-64">
+      <label for="f-q" class="lbl">Cari</label>
+      <input id="f-q" type="search" name="q" value="{{ q }}" placeholder="Nomor surat atau perihal" class="field">
+    </div>
+    {% if request.user.is_admin_role %}
+    <div>
+      <label for="f-bagian" class="lbl">Bagian</label>
+      <select id="f-bagian" name="bagian" x-model="bagian" class="field">
+        <option value="semua">Semua bagian</option>
+        {% for u in units %}<option value="{{ u.pk }}"{% if bagian == u.pk|stringformat:"s" %} selected{% endif %}>{{ u.nama }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    <div>
+      <label for="f-dari" class="lbl">Dari bulan</label>
+      <input id="f-dari" type="month" name="dari" value="{{ dari }}" class="field">
+    </div>
+    <div>
+      <label for="f-sampai" class="lbl">Sampai bulan</label>
+      <input id="f-sampai" type="month" name="sampai" value="{{ sampai }}" class="field">
+    </div>
+  </div>
+
+  <div class="flex flex-wrap items-end justify-between gap-4 p-4">
+    <div class="flex flex-wrap items-end gap-4">
+      <div>
+        <label for="f-mode" class="lbl">Format export</label>
+        <select id="f-mode" name="mode" class="field">
+          <option value="per_bulan"{% if mode != 'gabung' %} selected{% endif %}>Satu tab per bulan</option>
+          <option value="gabung"{% if mode == 'gabung' %} selected{% endif %}>Semua bulan dalam satu tab</option>
+        </select>
+      </div>
+      {% if request.user.is_admin_role %}
+      <div x-show="bagian === 'semua'" x-cloak>
+        <label for="f-susunan" class="lbl">Susunan semua bagian</label>
+        <select id="f-susunan" name="susunan" class="field">
+          <option value="gabung"{% if susunan != 'terpisah' %} selected{% endif %}>Digabung jadi satu daftar</option>
+          <option value="terpisah"{% if susunan == 'terpisah' %} selected{% endif %}>Dipisah per bagian</option>
+        </select>
+      </div>
+      {% endif %}
+    </div>
+    <div class="flex gap-3">
+      <button type="submit" class="btn btn-outline">Tampilkan</button>
+      <button type="submit" formaction="{% url 'arsip_export' %}" class="btn btn-primary">Export Excel</button>
+    </div>
+    <p class="w-full text-xs text-slate-800">Pilih bulan yang sama untuk satu bulan, atau bulan berbeda untuk rentang. Kata kunci pencarian ikut terbawa ke hasil export.</p>
+  </div>
+</form>
+
+{% include "arsip/_tabel.html" with tanpa_aksi=True %}
+{% endblock %}

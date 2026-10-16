@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Daftar Arsip · SIARSIP{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-900">Daftar Arsip</h1>
+    <p class="mt-1 text-sm text-slate-800">Cari dan filter arsip berdasarkan kata kunci, bulan, atau kategori.</p>
+  </div>
+  <div class="flex gap-3">
+    <button type="button" hx-get="{% url 'arsip_import' %}" hx-target="#modal-root" class="btn btn-outline">Import Excel</button>
+    <button type="button" hx-get="{% url 'arsip_tambah' %}" hx-target="#modal-root" class="btn btn-primary">
+      <svg class="h-4 w-4" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+      Tambah Arsip
+    </button>
+  </div>
+</div>
+
+<form role="search" aria-label="Filter daftar arsip" class="card mb-5 flex flex-wrap items-end gap-4 border-slate-300 bg-slate-200 p-4"
+      hx-get="{% url 'arsip_list' %}" hx-target="#tabel" hx-indicator="#tabel" hx-sync="this:replace"
+      hx-trigger="input delay:300ms, change, submit">
+  <div class="min-w-[14rem] grow basis-64">
+    <label for="f-q" class="lbl">Cari</label>
+    <input id="f-q" type="search" name="q" value="{{ q }}" placeholder="Kode, nomor surat, atau perihal" class="field">
+  </div>
+  <div>
+    <label for="f-bulan" class="lbl">Bulan</label>
+    <input id="f-bulan" type="month" name="bulan" value="{{ bulan }}" class="field">
+  </div>
+  <div class="min-w-[14rem] grow basis-64 sm:max-w-sm">
+    <label for="f-kat" class="lbl">Kategori klasifikasi</label>
+    <select id="f-kat" name="kat" class="field">
+      <option value="">Semua kategori</option>
+      {% for k in kategori_list %}
+      <option value="{{ k.kode }}"{% if kat == k.kode %} selected{% endif %}>{{ k.kode }}{% if k.nama %} — {{ k.nama }}{% endif %}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <a href="{% url 'arsip_list' %}" class="btn border border-slate-400 bg-white text-slate-900 hover:bg-slate-50">Atur ulang</a>
+</form>
+
+<div id="tabel">{% include "arsip/_tabel.html" %}</div>
+{% endblock %}

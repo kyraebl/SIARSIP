@@ -1,0 +1,115 @@
+{% if error %}
+<div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ error }}</div>
+{% else %}
+  {% if simpan %}
+  <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+    <span class="font-semibold">{{ hasil.diimpor }}</span> arsip berhasil diimpor.
+  </div>
+  {% else %}
+  <div class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+    Hasil pengecekan. Belum ada data yang disimpan.
+  </div>
+  {% endif %}
+
+  <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="text-xs text-slate-500">Baris terbaca</p>
+      <p class="mt-1 text-xl font-bold text-slate-900">{{ hasil.total }}</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="text-xs text-slate-500">{% if simpan %}Berhasil diimpor{% else %}Siap diimpor{% endif %}</p>
+      <p class="mt-1 text-xl font-bold text-emerald-600">{% if simpan %}{{ hasil.diimpor }}{% else %}{{ hasil.bisa_impor }}{% endif %}</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="text-xs text-slate-500">Sudah ada (dilewati)</p>
+      <p class="mt-1 text-xl font-bold text-slate-700">{{ hasil.duplikat }}</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="text-xs text-slate-500">Nomor belum keluar</p>
+      <p class="mt-1 text-xl font-bold {% if hasil.belum_nomor %}text-amber-600{% else %}text-slate-700{% endif %}">{{ hasil.belum_nomor }}</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="text-xs text-slate-500">Bermasalah</p>
+      <p class="mt-1 text-xl font-bold {% if hasil.galat %}text-red-600{% else %}text-slate-700{% endif %}">{{ hasil.galat|length }}</p>
+    </div>
+  </div>
+
+  {% if hasil.lembar %}
+  <p class="mt-4 text-xs text-slate-500">Tab yang dibaca:
+    {% for nama, jml in hasil.lembar %}<span class="mr-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">{{ nama }} ({{ jml }})</span>{% endfor %}
+  </p>
+  {% endif %}
+  {% if hasil.dilewati %}
+  <p class="mt-2 text-xs text-slate-500">Tab dilewati karena tidak ada judul kolom Daftar Isi Berkas:
+    {% for nama in hasil.dilewati %}<span class="mr-1 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-amber-700">{{ nama }}</span>{% endfor %}
+  </p>
+  {% endif %}
+
+  {% if not simpan and hasil.baris %}
+  <div class="mt-5" x-data="{ f: '{% if hasil.galat or hasil.belum_nomor %}cek{% else %}semua{% endif %}' }">
+    <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+      <p class="text-sm font-semibold text-slate-900">Preview data</p>
+      <div class="flex gap-1.5 text-xs">
+        <button type="button" @click="f = 'semua'" :class="f === 'semua' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="rounded-full px-3 py-1 font-medium">Semua ({{ hasil.baris|length }})</button>
+        <button type="button" @click="f = 'cek'" :class="f === 'cek' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="rounded-full px-3 py-1 font-medium">Perlu dicek ({{ hasil.perlu_dicek }})</button>
+        <button type="button" @click="f = 'siap'" :class="f === 'siap' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="rounded-full px-3 py-1 font-medium">Siap diimpor ({{ hasil.bisa_impor }})</button>
+      </div>
+    </div>
+    <p class="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+      <span><span class="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-red-200 align-middle"></span>Merah: format salah, tidak diimpor</span>
+      <span><span class="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-amber-200 align-middle"></span>Kuning: nomor surat belum keluar, tetap diimpor dan dilengkapi nanti</span>
+      <span><span class="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-slate-200 align-middle"></span>Abu-abu: sudah ada di sistem</span>
+    </p>
+    <div class="max-h-96 overflow-auto rounded-lg border border-slate-200">
+      <table class="min-w-full text-left text-xs">
+        <thead class="sticky top-0 z-10 bg-slate-50 font-semibold uppercase tracking-wide text-slate-500 shadow-[0_1px_0_0_theme(colors.slate.200)]">
+          <tr>
+            <th class="px-3 py-2">Tab / Baris</th>
+            <th class="px-3 py-2">Kode</th>
+            <th class="px-3 py-2">Uraian informasi</th>
+            <th class="px-3 py-2">Tanggal</th>
+            <th class="px-3 py-2">Jml</th>
+            <th class="px-3 py-2">Ket.</th>
+            <th class="px-3 py-2">Keamanan</th>
+            <th class="px-3 py-2">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for b in hasil.baris %}
+          <tr data-s="{{ b.status }}"
+              x-show="f === 'semua' || (f === 'cek' && ($el.dataset.s === 'galat' || $el.dataset.s === 'belum')) || (f === 'siap' && ($el.dataset.s === 'siap' || $el.dataset.s === 'belum'))"
+              class="{% if b.status == 'galat' %}bg-red-50{% elif b.status == 'belum' %}bg-amber-50{% elif b.status == 'duplikat' %}bg-slate-50 text-slate-400{% endif %}">
+            <td class="whitespace-nowrap px-3 py-2 text-slate-500">{{ b.lembar }} / {{ b.baris }}</td>
+            <td class="whitespace-nowrap px-3 py-2 {% if 'kode' in b.kolom %}bg-red-200 font-medium text-red-800{% endif %}">{{ b.kode|default:"-" }}</td>
+            <td class="min-w-[18rem] px-3 py-2 {% if 'uraian' in b.kolom %}{% if b.status == 'galat' %}bg-red-200 font-medium text-red-800{% else %}bg-amber-200 font-medium text-amber-900{% endif %}{% endif %}">{{ b.uraian }}</td>
+            <td class="whitespace-nowrap px-3 py-2 {% if 'tanggal' in b.kolom %}bg-red-200 font-medium text-red-800{% endif %}">{{ b.tanggal|default:"(kosong)" }}</td>
+            <td class="whitespace-nowrap px-3 py-2">{{ b.jumlah }}</td>
+            <td class="whitespace-nowrap px-3 py-2 {% if 'keterangan' in b.kolom %}bg-red-200 font-medium text-red-800{% endif %}">{{ b.keterangan|default:"-" }}</td>
+            <td class="whitespace-nowrap px-3 py-2 {% if 'keamanan' in b.kolom %}bg-red-200 font-medium text-red-800{% endif %}">{{ b.keamanan|default:"-" }}</td>
+            <td class="min-w-[12rem] px-3 py-2">
+              {% if b.status == 'siap' %}<span class="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700">Siap</span>
+              {% elif b.status == 'duplikat' %}<span class="rounded-full bg-slate-200 px-2 py-0.5 font-medium text-slate-600">Sudah ada</span>
+              {% elif b.status == 'belum' %}<span class="rounded-full bg-amber-200 px-2 py-0.5 font-medium text-amber-900">Nomor belum keluar</span><p class="mt-1 text-amber-800">{{ b.alasan }}</p>
+              {% else %}<span class="rounded-full bg-red-200 px-2 py-0.5 font-medium text-red-800">Perlu diperbaiki</span><p class="mt-1 text-red-700">{{ b.alasan }}</p>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="mt-5 flex justify-end">
+    {% if simpan %}
+    <button type="button" onclick="location.reload()" class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">Selesai</button>
+    {% elif hasil.bisa_impor %}
+    <button type="button" hx-post="{% url 'arsip_import' %}" hx-vals='{"simpan": "1"}' hx-target="#hasil-import"
+            hx-disabled-elt="this"
+            class="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60">
+      Impor {{ hasil.bisa_impor }} arsip sekarang
+    </button>
+    {% endif %}
+  </div>
+{% endif %}
