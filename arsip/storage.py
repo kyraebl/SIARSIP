@@ -41,7 +41,7 @@ class GoogleDriveStorage(Storage):
     def _save(self, name, content):
         content.seek(0)
         media = MediaIoBaseUpload(io.BytesIO(content.read()), mimetype="application/pdf")
-        nama_asli = os.path.basename(name).split("__", 1)[-1]   # buang awalan acak
+        nama_asli = os.path.basename(name).split("__", 1)[-1]   
         meta = {"name": nama_asli, "parents": [settings.GDRIVE_FOLDER_ID]}
         f = self.service.files().create(
             body=meta, media_body=media, fields="id", supportsAllDrives=True,
@@ -58,23 +58,33 @@ class GoogleDriveStorage(Storage):
         return ContentFile(buf.getvalue(), name=name)
 
     def delete(self, name):
-        """Pindahkan ke Sampah Drive (masih bisa dipulihkan sekitar 30 hari)."""
+        """Hapus permanen dari Drive."""
         if not name:
             return
         try:
-            self.service.files().update(
-                fileId=name, body={"trashed": True}, supportsAllDrives=True,
-            ).execute()
+            self.service.files().delete(fileId=name, supportsAllDrives=True).execute()
         except HttpError as e:
             if e.resp.status != 404:
                 raise
 
+    def ada(self, name):
+        """True kalau file masih ada di Drive dan tidak di Sampah."""
+        try:
+            info = self.service.files().get(
+                fileId=name, fields="trashed", supportsAllDrives=True,
+            ).execute()
+        except HttpError as e:
+            if e.resp.status == 404:
+                return False
+            raise
+        return not info.get("trashed", False)
+
     def exists(self, name):
-        return False   # nama yang disimpan adalah ID acak dari Drive, tidak mungkin bentrok
+        return False   
 
     def size(self, name):
         info = self.service.files().get(fileId=name, fields="size", supportsAllDrives=True).execute()
         return int(info.get("size", 0))
 
     def url(self, name):
-        return ""   # berkas hanya dibuka lewat view arsip_berkas, tidak ada link publik
+        return ""   

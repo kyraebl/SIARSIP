@@ -4,17 +4,18 @@ from django.conf import settings
 from django.http import FileResponse, Http404, HttpResponse
 from django.utils.formats import date_format
 from datetime import date
-from itertools import groupby
+from itertools import accumulate, groupby
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Max, Q
+from django.db.models import Max, Q, Sum
+from django.db.models.functions import ExtractMonth
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from master.models import Kategori, KodeTujuan, Pengesah
-from .exports import BULAN, buat_excel, label_periode
+from .exports import BULAN, buat_excel, buat_excel_rekap, label_periode
 from .forms import ArsipForm, ImportExcelForm
 from .importer import ImportGagal, proses_import
 from .models import Arsip
@@ -120,6 +121,75 @@ def _bagian(request, qs):
         return qs.filter(unit_kerja=unit), str(unit.pk), unit
     return qs, "semua", None
 
+def _tahun(request, qs):
+    """Tahun rekap dari ?tahun=. Hanya tahun yang ada datanya (atau tahun ini) yang diterima."""
+    ini = date.today().year
+    pilihan = sorted({d.year for d in qs.dates("tanggal", "year")} | {ini})
+    t = request.GET.get("tahun", "")
+    return (int(t) if t.isascii() and t.isdigit() and int(t) in pilihan else ini), pilihan
+
+def rekap_bagian(qs, units, tahun):
+    """Total berkas (jumlah bks) per bagian per bulan di satu tahun, plus jumlah per bulan dan total kumulatif."""
+    hasil = (qs.filter(tanggal__year=tahun)
+               .annotate(bln=ExtractMonth("tanggal"))
+               .order_by()
+               .values("unit_kerja_id", "bln")
+               .annotate(total=Sum("jumlah")))
+    isi = {(r["unit_kerja_id"], r["bln"]): r["total"] for r in hasil}
+    baris = [{"unit": u, "bulan": [isi.get((u.pk, b), 0) for b in range(1, 13)]} for u in units]
+    jumlah = [sum(b["bulan"][i] for b in baris) for i in range(12)]
+    return {"baris": baris, "jumlah": jumlah, "total": list(accumulate(jumlah)),
+            "total_semua": sum(jumlah)}
+
+KLASIFIKASI_REKAP = [
+    ("HK", "Hukum (HK)"),
+    ("HM", "Humas (HM)"),
+    ("KP", "Kepegawaian (KP)"),
+    ("KU", "Keuangan (KU)"),
+    ("OR", "Organisasi (OR)"),
+    ("PA", "Pengelolaan Data (PA)"),
+    ("PR", "Perencanaan (PR)"),
+    ("PS", "Pengelolaan Aset BMN (PS)"),
+    ("PW", "Pengawasan (PW)"),
+    ("UM", "Umum (UM)"),
+    ("SA", "Sumber Daya Air (SA)"),
+    ("SM", "Pengembangan SDM (SM)"),
+]
+
+def _saring_bulan(qs, bulan):
+    return qs.filter(tanggal__month=bulan) if bulan else qs
+
+
+def rekap_klasifikasi(qs, units, tahun, bulan=None):
+    kode = [k for k, _ in KLASIFIKASI_REKAP]
+    hasil = (_saring_bulan(qs.filter(tanggal__year=tahun, kategori__kode__in=kode), bulan)
+               .order_by()
+               .values("unit_kerja_id", "kategori__kode")
+               .annotate(total=Sum("jumlah")))
+    isi = {(r["unit_kerja_id"], r["kategori__kode"]): r["total"] for r in hasil}
+    baris = [{"unit": u, "kategori": [isi.get((u.pk, k), 0) for k in kode]} for u in units]
+    jumlah = [sum(b["kategori"][i] for b in baris) for i in range(len(kode))]
+    return {"kategori": [label for _, label in KLASIFIKASI_REKAP], "baris": baris,
+            "jumlah": jumlah, "total_semua": sum(jumlah)}
+
+
+def rekap_jenis_sifat(qs, units, tahun, bulan=None):
+    def hitung(field, pilihan):
+        hasil = (_saring_bulan(qs.filter(tanggal__year=tahun), bulan)
+                   .order_by()
+                   .values("unit_kerja_id", field)
+                   .annotate(total=Sum("jumlah")))
+        isi = {(r["unit_kerja_id"], r[field]): r["total"] for r in hasil}
+        kode = [k for k, _ in pilihan]
+        baris = [{"unit": u, "nilai": [isi.get((u.pk, k), 0) for k in kode]} for u in units]
+        jumlah = [sum(b["nilai"][i] for b in baris) for i in range(len(kode))]
+        return {"kolom": [label for _, label in pilihan], "baris": baris,
+                "jumlah": jumlah, "total_semua": sum(jumlah)}
+
+    return {
+        "jenis": hitung("keterangan", [("asli", "Asli"), ("copy", "Copy")]),
+        "sifat": hitung("keamanan", [("terbuka", "Biasa"), ("terbatas", "Terbatas"), ("rahasia", "Rahasia")]),
+    }
 
 @login_required
 def dashboard(request):
@@ -136,8 +206,20 @@ def dashboard(request):
          qs.filter(tanggal__year=today.year, tanggal__month=today.month).count()),
     ]
     admin = request.user.is_admin_role
+    semua = Arsip.objects.all()   # tabel rekap menampilkan total seluruh bagian untuk semua akun
+    tahun, pilihan_tahun = _tahun(request, semua)
+    unit_rekap = UnitKerja.objects.order_by("id")
+    bulan = request.GET.get("bulan", "")
+    bulan = int(bulan) if bulan.isdigit() and 1 <= int(bulan) <= 12 else None
     return render(request, "dashboard.html", {
         "stats": stats,
+        "rekap": rekap_bagian(semua, unit_rekap, tahun),
+        "rekap_klas": rekap_klasifikasi(semua, unit_rekap, tahun, bulan),
+        "rekap_js": rekap_jenis_sifat(semua, unit_rekap, tahun, bulan),
+        "bulan_rekap": bulan,
+        "tahun": tahun,
+        "pilihan_tahun": pilihan_tahun,
+        "nama_bulan": BULAN,
         "jumlah": per.count(),
         "q": q,
         "grup": susun_tabel(per),
@@ -149,7 +231,6 @@ def dashboard(request):
         "susunan": request.GET.get("susunan", "gabung"),
         "tampil_bagian": admin and bagian == "semua",
     })
-
 
 @login_required
 def arsip_export(request):
@@ -163,7 +244,6 @@ def arsip_export(request):
         qs = qs.filter(unit_kerja=unit_pilih)
 
     awal, akhir = _periode(request, qs)
-    qs = _cari(qs, request.GET.get("q"))   # export mengikuti pencarian yang sedang tampil
     mode = request.GET.get("mode", "per_bulan")
     terpisah = unit_pilih is None and request.GET.get("susunan") == "terpisah"
 
@@ -180,9 +260,8 @@ def arsip_export(request):
         params["dari"], params["sampai"] = f"{awal:%Y-%m}", f"{akhir:%Y-%m}"
         return redirect(f"{reverse('dashboard')}?{params.urlencode()}")
 
-    data = buat_excel(lembar)
-
     label = unit_pilih.singkatan if unit_pilih else "Semua Bagian"
+    data = buat_excel(lembar)
     nama_file = f"Daftar Isi Berkas {label} {awal:%Y-%m}"
     if akhir != awal:
         nama_file += f" sd {akhir:%Y-%m}"
@@ -242,7 +321,7 @@ def arsip_form(request, pk=None):
             a.created_by = user
         a.save()
         if berkas_lama and berkas_lama != a.berkas.name:
-            a.berkas.storage.delete(berkas_lama)   # hapus file lama yang sudah diganti
+            a.berkas.storage.delete(berkas_lama)   
         messages.success(request, f"Arsip berhasil disimpan di bulan {date_format(a.tanggal, 'F Y')}.")
         return HttpResponse(headers={"HX-Refresh": "true"})
 
@@ -271,7 +350,11 @@ def arsip_berkas(request, pk):
     if not a.berkas:
         raise Http404("Arsip ini belum punya berkas.")
 
-    # Opsi: buka langsung di halaman Drive (hanya jalan kalau yang buka punya akses ke file itu)
+    if settings.USE_GDRIVE and not a.berkas.storage.ada(a.berkas.name):
+        Arsip.objects.filter(pk=a.pk).update(berkas="")
+        messages.error(request, "Berkas sudah dihapus dari Drive. Silakan unggah ulang.")
+        return redirect("arsip_list")
+
     if settings.USE_GDRIVE and settings.GDRIVE_BUKA_DI_DRIVE:
         return redirect(f"https://drive.google.com/file/d/{a.berkas.name}/view")
 
@@ -279,7 +362,6 @@ def arsip_berkas(request, pk):
         f = a.berkas.open("rb")
     except HttpError as e:
         if e.resp.status == 404:
-            # File sudah dihapus permanen di Drive: kembalikan arsip ke status "soft file belum diunggah"
             Arsip.objects.filter(pk=a.pk).update(berkas="")
             messages.error(request, "Berkas tidak ditemukan di Drive (kemungkinan sudah dihapus). Silakan unggah ulang.")
             return redirect("arsip_list")

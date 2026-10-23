@@ -48,7 +48,6 @@ class ArsipForm(forms.ModelForm):
                 f.widget.attrs["class"] = f"{INPUT} {extra}".strip()
         self.fields["kategori"].empty_label = "Pilih kategori"
         if self.bebas:
-            # Unit dengan uraian bebas (contoh: Satker): tidak ada pejabat dan nomor surat
             del self.fields["kode_tujuan"]
             del self.fields["nomor_surat"]
             self.fields["perihal"].label = "Uraian Informasi"

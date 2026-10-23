@@ -2,6 +2,7 @@ from decouple import config
 import dj_database_url
 from pathlib import Path
 from django.templatetags.static import static
+from django.urls import reverse_lazy
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -140,19 +141,45 @@ UNFOLD = {
     ],
     "SITE_URL": "/",
     "THEME": "light",
+    "STYLES": [lambda request: static("admin-siarsip.css")],
+        "SIDEBAR": {
+        "show_search": False,
+        "show_all_applications": False,
+        "navigation": [
+            {
+                "items": [
+                    {"title": "Pengguna", "link": reverse_lazy("admin:accounts_user_changelist")},
+                    {"title": "Unit kerja", "link": reverse_lazy("admin:accounts_unitkerja_changelist")},
+                    {
+                        "title": "Dashboard",
+                        "link": reverse_lazy("admin:arsip_arsip_dashboard"),
+                        "active": lambda request: request.path == str(reverse_lazy("admin:arsip_arsip_dashboard")),
+                    },
+                    {
+                        "title": "Arsip",
+                        "link": reverse_lazy("admin:arsip_arsip_changelist"),
+                        "active": lambda request: (
+                            request.path.startswith(str(reverse_lazy("admin:arsip_arsip_changelist")))
+                            and request.path != str(reverse_lazy("admin:arsip_arsip_dashboard"))
+                        ),
+                    },
+                    {"title": "Kategori klasifikasi", "link": reverse_lazy("admin:master_kategori_changelist")},
+                    {"title": "Pejabat penandatanganan", "link": reverse_lazy("admin:master_kodetujuan_changelist")},
+                    {"title": "Pengesah", "link": reverse_lazy("admin:master_pengesah_changelist")},
+                ],
+            },
+        ],
+    },
     "COLORS": {
+        "base": {
+            "50": "#f8fafc", "100": "#f1f5f9", "200": "#e2e8f0", "300": "#cbd5e1", "400": "#94a3b8",
+            "500": "#64748b", "600": "#475569", "700": "#334155", "800": "#1e293b", "900": "#0f172a",
+            "950": "#020617",
+        },
         "primary": {
-            "50": "oklch(97% .014 254.604)",
-            "100": "oklch(93.2% .032 255.585)",
-            "200": "oklch(88.2% .059 254.128)",
-            "300": "oklch(80.9% .105 251.813)",
-            "400": "oklch(70.7% .165 254.624)",
-            "500": "oklch(62.3% .214 259.815)",
-            "600": "oklch(54.6% .245 262.881)",
-            "700": "oklch(48.8% .243 264.376)",
-            "800": "oklch(42.4% .199 265.638)",
-            "900": "oklch(37.9% .146 265.522)",
-            "950": "oklch(28.2% .091 267.935)",
+            "50": "#EEF4FA", "100": "#DCE8F4", "200": "#B9D1E8", "300": "#8DB4D8", "400": "#5B92C4",
+            "500": "#3B7AB5", "600": "#2A55A8", "700": "#234A9A", "800": "#1D3E84", "900": "#183670",
+            "950": "#122A58",
         },
     },
 }

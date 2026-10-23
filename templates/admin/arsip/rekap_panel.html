@@ -1,0 +1,97 @@
+<style>
+  .rk-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .75rem; margin-bottom: .75rem; }
+  .rk-top h2 { margin: 0; font-size: 1.125rem; font-weight: 600; color: #0f172a; }
+  .rk-filter { display: flex; align-items: center; gap: .5rem; margin: 0; }
+  .rk-filter label { font-size: .875rem; font-weight: 500; color: #0f172a; }
+  .rk-filter select {
+    min-width: 8rem; padding: .4rem .75rem; font-size: .875rem; color: #334155;
+    background: #fff; border: 1px solid #cbd5e1; border-radius: .5rem;
+  }
+  .rk-filter select:focus { outline: none; border-color: #2A55A8; box-shadow: 0 0 0 2px #B9D1E8; }
+  .rk-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; align-items: start; margin-bottom: 1.5rem; }
+  .rk-full { grid-column: 1 / -1; }
+  @media (max-width: 1023px) { .rk-grid { grid-template-columns: minmax(0, 1fr); } }
+  .rk-box { overflow-x: auto; background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem; }
+  .rk-table { width: 100%; min-width: max-content; border-collapse: collapse; font-size: .875rem; font-variant-numeric: tabular-nums; text-align: center; color: #0f172a; }
+  .rk-table th, .rk-table td { padding: .5rem .75rem; }
+  .rk-table thead th { padding: .75rem .5rem; font-weight: 600; color: #fff; background: #234A9A; }
+  .rk-table thead th.rk-grup { border-bottom: 1px solid #5b7fc4; }
+  .rk-table tbody tr { border-bottom: 1px solid #e2e8f0; }
+  .rk-table tbody tr:nth-child(even) { background: #f8fafc; }
+  .rk-table tbody tr:hover { background: #eff6ff; }
+  .rk-table tbody th { font-weight: 500; }
+  .rk-table tfoot { font-weight: 600; color: #1e3a8a; background: #eff6ff; border-top: 2px solid #bfdbfe; }
+  .rk-table tfoot tr:first-child { border-bottom: 1px solid #e2e8f0; }
+  .rk-table tfoot tr:last-child { background: #dbeafe; }
+</style>
+
+<div class="rk-top">
+  <h2>Rekap total berkas</h2>
+  <form method="get" action="{{ request.path }}" class="rk-filter">
+    {% if rekap_bulan %}<input type="hidden" name="bulan" value="{{ rekap_bulan }}">{% endif %}
+    <label for="rk-tahun">Tahun</label>
+    <select id="rk-tahun" name="tahun" onchange="this.form.submit()">
+      {% for t in rekap_pilihan_tahun %}<option value="{{ t }}"{% if t == rekap_tahun %} selected{% endif %}>{{ t }}</option>{% endfor %}
+    </select>
+  </form>
+</div>
+
+<div class="rk-grid">
+  {% for t in rekap_tabel %}
+  <section id="rekap-{{ t.uid }}"{% if t.penuh %} class="rk-full"{% endif %}>
+    <div class="rk-top">
+      <h2 style="font-size:1rem">{{ t.judul }}</h2>
+      {% if t.filter_bulan %}
+      <form method="get" action="{{ request.path }}#rekap-{{ t.uid }}" class="rk-filter">
+        <input type="hidden" name="tahun" value="{{ rekap_tahun }}">
+        <label for="rk-bulan-{{ t.uid }}">Bulan rekap</label>
+        <select id="rk-bulan-{{ t.uid }}" name="bulan" onchange="this.form.submit()">
+          <option value="">Januari - Desember</option>
+          {% for nama in rekap_nama_bulan %}<option value="{{ forloop.counter }}"{% if rekap_bulan == forloop.counter %} selected{% endif %}>{{ nama }}</option>{% endfor %}
+        </select>
+      </form>
+      {% endif %}
+    </div>
+    <div class="rk-box">
+      <table class="rk-table">
+        <thead>
+          {% if t.grup %}
+          <tr>
+            <th rowspan="2">Bagian</th>
+            <th colspan="{{ t.kolom|length }}" class="rk-grup">{{ t.grup }}</th>
+          </tr>
+          <tr>{% for k in t.kolom %}<th>{{ k }}</th>{% endfor %}</tr>
+          {% else %}
+          <tr>
+            {% if t.pakai_no %}<th>No</th>{% endif %}
+            <th>Bagian</th>
+            {% for k in t.kolom %}<th>{{ k }}</th>{% endfor %}
+          </tr>
+          {% endif %}
+        </thead>
+        <tbody>
+          {% for nama, nilai in t.baris %}
+          <tr>
+            {% if t.pakai_no %}<td>{{ forloop.counter }}</td>{% endif %}
+            <th scope="row">{{ nama }}</th>
+            {% for n in nilai %}<td>{{ n }}</td>{% endfor %}
+          </tr>
+          {% empty %}
+          <tr><td colspan="{{ t.kolom|length|add:2 }}" style="padding:1rem">Belum ada unit kerja.</td></tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th scope="row"{% if t.pakai_no %} colspan="2"{% endif %}>Jumlah</th>
+            {% for n in t.jumlah %}<td>{{ n }}</td>{% endfor %}
+          </tr>
+          <tr>
+            <th scope="row"{% if t.pakai_no %} colspan="2"{% endif %}>Total</th>
+            <td colspan="{{ t.kolom|length }}">{{ t.total_semua }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+  {% endfor %}
+</div>

@@ -3,8 +3,8 @@ from accounts.models import UnitKerja
 
 
 class KodeTujuan(models.Model):
-    kode = models.CharField(max_length=10, unique=True)      # Aa, Aa1, ...
-    nama_jabatan = models.CharField(max_length=150)          # Kepala Sekretariat DSDAN
+    kode = models.CharField(max_length=10, unique=True)      
+    nama_jabatan = models.CharField(max_length=150)          
 
     class Meta:
         verbose_name_plural = "Pejabat penandatanganan"
@@ -15,7 +15,7 @@ class KodeTujuan(models.Model):
 
 
 class Kategori(models.Model):
-    kode = models.CharField(max_length=5, unique=True)       # HK, HM, KP, ...
+    kode = models.CharField(max_length=5, unique=True)       
     nama = models.CharField(max_length=100, blank=True)
     urutan = models.PositiveIntegerField(default=0)
 

@@ -17,17 +17,14 @@ POLA_URAIAN = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
-# Uraian yang nomor suratnya belum keluar, contoh: "Surat ... No: HK0102-Aa/ Hal ..."
 POLA_BELUM_NOMOR = re.compile(
     r"^Surat\s+.+?\s+No\s*:\s*"
     r"(?P<kategori>[A-Za-z]{2})(?P<sub>\d*)\s*-\s*(?P<tujuan>[A-Za-z]+\d*)\s*/\s*(?:Hal\s+(?P<perihal>.+))?$",
     re.IGNORECASE | re.DOTALL,
 )
 
-# Kode klasifikasi di kolom sendiri (unit uraian bebas), contoh: "KU 03"
 POLA_KODE = re.compile(r"^(?P<kategori>[A-Za-z]{2})\s*(?P<sub>\d*)$")
 
-# Isi nomor yang cuma placeholder, contoh: "-", "...", "xxx"
 POLA_NOMOR_KOSONG = re.compile(r"^[-._?xX]*$")
 
 BULAN = {
@@ -138,9 +135,9 @@ def _cari_header(rows):
     return None, None
 
 
-def proses_import(file, user, simpan=False):
+def proses_import(file, user, simpan=False, unit=None):
     """Baca file Excel Daftar Isi Berkas. simpan=False hanya mengecek tanpa menyimpan."""
-    unit = user.unit_kerja
+    unit = unit or user.unit_kerja
     bebas = unit.uraian_bebas
     hasil = {"lembar": [], "dilewati": [], "total": 0, "siap": 0,
              "duplikat": 0, "galat": [], "belum_nomor": 0, "diimpor": 0,
@@ -155,12 +152,9 @@ def proses_import(file, user, simpan=False):
     tujuan = {t.kode.lower(): t for t in KodeTujuan.objects.all()}
     ada = set(Arsip.objects.filter(unit_kerja=unit).exclude(nomor_surat="").values_list(
         "kategori_id", "sub_kode", "kode_tujuan_id", "nomor_surat", "tanggal"))
-    # Arsip tanpa nomor dibedakan lewat perihalnya (kalau tidak, dua surat di tanggal yang sama dianggap kembar)
     ada_kosong = {(k, sk, kt, t, _norm(pr)) for k, sk, kt, t, pr in Arsip.objects.filter(
         unit_kerja=unit, nomor_surat="").values_list(
         "kategori_id", "sub_kode", "kode_tujuan_id", "tanggal", "perihal")}
-    # Uraian bebas: baris yang sama persis boleh muncul berkali-kali (contoh: 3 lampiran satu SPM),
-    # jadi duplikat dihitung per kemunculan, bukan per isi.
     ada_bebas = Counter((k, sk, t, _norm(pr)) for k, sk, t, pr in Arsip.objects.filter(
         unit_kerja=unit, kode_tujuan__isnull=True).values_list(
         "kategori_id", "sub_kode", "tanggal", "perihal"))
@@ -209,7 +203,6 @@ def proses_import(file, user, simpan=False):
             }
 
             if bebas:
-                # Sel kode yang digabung (merge) di Excel hanya terisi di baris pertama, jadi pakai kode baris di atasnya
                 item["kode"] = _teks(_ambil(row, kol.get("kode"))) or kode_terakhir
                 kode_terakhir = item["kode"]
                 mk = POLA_KODE.match(item["kode"])

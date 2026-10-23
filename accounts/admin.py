@@ -9,7 +9,7 @@ from unfold.widgets import UnfoldAdminPasswordWidget
 
 from .models import UnitKerja, User
 
-admin.site.unregister(Group)   # menu Grup tidak dipakai, akses diatur lewat Peran saja
+admin.site.unregister(Group)   
 
 PERAN = [
     (User.Role.STAF, "Staf bagian (hanya arsip bagiannya)"),
@@ -55,7 +55,7 @@ class AkunUbahForm(RapikanAkunMixin, UserChangeForm):
         super().__init__(*args, **kwargs)
         self._rapikan()
         if self.instance.pk and self.instance.is_superuser:
-            self.initial["role"] = User.Role.ADMIN   # superuser bawaan tampil sebagai Admin
+            self.initial["role"] = User.Role.ADMIN   
 
     def clean_sandi_baru(self):
         sandi = self.cleaned_data.get("sandi_baru")
@@ -95,9 +95,8 @@ class CustomUserAdmin(UserAdmin, ModelAdmin):
         return "Admin (serba bisa)" if obj.is_admin_role else "Staf bagian"
 
     def save_model(self, request, obj, form, change):
-        # Hak akses diatur otomatis dari Peran, jadi tidak ada kotak izin yang perlu dicentang
         admin_role = obj.role == User.Role.ADMIN
-        if change and obj.pk == request.user.pk:   # cegah mengunci diri sendiri
+        if change and obj.pk == request.user.pk:   
             admin_role = True
             obj.role = User.Role.ADMIN
             obj.is_active = True
@@ -107,7 +106,7 @@ class CustomUserAdmin(UserAdmin, ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         if obj is not None and obj.pk == request.user.pk:
-            return False   # akun sendiri tidak bisa dihapus
+            return False  
         return super().has_delete_permission(request, obj)
 
 

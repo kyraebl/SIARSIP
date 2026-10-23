@@ -1,0 +1,8 @@
+<form method="get" action="{% url 'dashboard' %}#rekap-{{ uid }}" class="flex items-center gap-2">
+  <input type="hidden" name="tahun" value="{{ tahun }}">
+  <label for="f-bulan-{{ uid }}" class="text-sm font-medium text-slate-900">Bulan rekap</label>
+  <select id="f-bulan-{{ uid }}" name="bulan" class="field !w-auto" @change="$el.form.submit()">
+    <option value="">Januari - Desember</option>
+    {% for nama in nama_bulan %}<option value="{{ forloop.counter }}"{% if bulan_rekap == forloop.counter %} selected{% endif %}>{{ nama|title }}</option>{% endfor %}
+  </select>
+</form>

@@ -1,9 +1,21 @@
 {% extends "base.html" %}
 {% block title %}Dashboard · SIARSIP{% endblock %}
 {% block content %}
-<div class="mb-6">
-  <h1 class="text-2xl font-bold text-slate-900">Dashboard</h1>
-  <p class="mt-1 text-sm text-slate-800">Ringkasan arsip {{ request.user.unit_kerja|default:"semua unit" }}</p>
+<div x-data>
+
+<div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-900">Dashboard</h1>
+    <p class="mt-1 text-sm text-slate-800">Arsip {{ request.user.unit_kerja|default:"semua unit" }}</p>
+  </div>
+  <form method="get" action="{% url 'dashboard' %}" class="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+    <div class="flex items-center gap-2">
+      <label for="f-tahun" class="text-sm font-medium text-slate-900">Tahun</label>
+      <select id="f-tahun" name="tahun" class="field !w-auto" @change="$el.form.submit()">
+        {% for t in pilihan_tahun %}<option value="{{ t }}"{% if t == tahun %} selected{% endif %}>{{ t }}</option>{% endfor %}
+      </select>
+    </div>
+  </form>
 </div>
 
 <dl class="grid gap-4 sm:grid-cols-2 lg:max-w-xl">
@@ -14,19 +26,190 @@
   </div>
   {% endfor %}
 </dl>
+<p class="mt-3 text-sm"><a href="#daftar-berkas" class="font-medium text-blue-700 hover:underline">Lompat ke Daftar isi berkas ↓</a></p>
 
-<h2 class="mb-3 mt-6 text-lg font-semibold text-slate-900">Daftar Isi Berkas</h2>
+<section id="rekap-bagian" class="mt-8">
+  <h2 class="mb-3 text-lg font-semibold text-slate-900">Total berkas per bagian</h2>
+  <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <table class="min-w-full text-sm tabular-nums">
+      <caption class="sr-only">Total berkas per bagian untuk setiap bulan</caption>
+      <thead class="bg-blue-700 text-sm text-white [&_th[scope=colgroup]]:border-b [&_th[scope=colgroup]]:border-blue-500">
+        <tr class="text-center">
+          <th scope="col" class="th">No</th>
+          <th scope="col" class="th">Bagian</th>
+          {% for nama in nama_bulan %}<th scope="col" class="th">{{ nama|title }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody class="text-center text-slate-900 [&>tr:nth-child(even)]:bg-slate-50 [&>tr:hover]:bg-blue-50">
+        {% for baris in rekap.baris %}
+        <tr class="border-b border-slate-200">
+          <td class="px-3 py-2">{{ forloop.counter }}</td>
+          <th scope="row" class="px-3 py-2 font-medium">{{ baris.unit.singkatan }}</th>
+          {% for n in baris.bulan %}<td class="px-3 py-2">{{ n }}</td>{% endfor %}
+        </tr>
+        {% empty %}
+        <tr><td colspan="14" class="px-3 py-4 text-slate-800">Akun ini belum punya unit kerja.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="border-t-2 border-blue-200 bg-blue-50 text-center font-semibold text-blue-900 [&>tr:last-child]:bg-blue-100">
+        <tr class="border-b border-slate-200">
+          <th scope="row" colspan="2" class="px-3 py-2">Jumlah</th>
+          {% for n in rekap.jumlah %}<td class="px-3 py-2">{{ n }}</td>{% endfor %}
+        </tr>
+        <tr>
+          <th scope="row" colspan="2" class="px-3 py-2">Total</th>
+          <td colspan="12" class="px-3 py-2">{{ rekap.total_semua }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</section>
 
-<form method="get" action="{% url 'dashboard' %}" x-data="{ bagian: '{{ bagian }}' }" class="card mb-5 divide-y divide-slate-300 border-slate-300 bg-slate-200">
-  <div class="flex flex-wrap items-end gap-4 p-4">
-    <div class="min-w-[14rem] grow basis-64">
+<section id="rekap-klasifikasi" class="mt-8">
+  <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+    <h2 class="text-lg font-semibold text-slate-900">Total berkas per klasifikasi</h2>
+    {% include "_filter_bulan.html" with uid="klasifikasi" %}
+  </div>
+  <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <table class="min-w-full text-sm tabular-nums">
+      <caption class="sr-only">Total berkas per bagian untuk setiap klasifikasi jenis berkas</caption>
+      <thead class="bg-blue-700 text-sm text-white [&_th[scope=colgroup]]:border-b [&_th[scope=colgroup]]:border-blue-500">
+        <tr class="text-center">
+          <th scope="col" rowspan="2" class="th">Bagian</th>
+          <th scope="colgroup" colspan="{{ rekap_klas.kategori|length }}" class="th">Klasifikasi Jenis Berkas</th>
+        </tr>
+        <tr class="text-center">
+          {% for k in rekap_klas.kategori %}<th scope="col" class="th">{{ k }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody class="text-center text-slate-900 [&>tr:nth-child(even)]:bg-slate-50 [&>tr:hover]:bg-blue-50">
+        {% for baris in rekap_klas.baris %}
+        <tr class="border-b border-slate-200">
+          <th scope="row" class="px-3 py-2 font-medium">{{ baris.unit.singkatan }}</th>
+          {% for n in baris.kategori %}<td class="px-3 py-2">{{ n }}</td>{% endfor %}
+        </tr>
+        {% empty %}
+        <tr><td colspan="{{ rekap_klas.kategori|length|add:1 }}" class="px-3 py-4 text-slate-800">Akun ini belum punya unit kerja.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="border-t-2 border-blue-200 bg-blue-50 text-center font-semibold text-blue-900 [&>tr:last-child]:bg-blue-100">
+        <tr class="border-b border-slate-200">
+          <th scope="row" class="px-3 py-2">Jumlah</th>
+          {% for n in rekap_klas.jumlah %}<td class="px-3 py-2">{{ n }}</td>{% endfor %}
+        </tr>
+        <tr>
+          <th scope="row" class="px-3 py-2">Total</th>
+          <td colspan="{{ rekap_klas.kategori|length }}" class="px-3 py-2">{{ rekap_klas.total_semua }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</section>
+
+<div class="mt-8 grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+
+<section id="rekap-jenis">
+  <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+    <h2 class="text-lg font-semibold text-slate-900">Total berkas per jenis</h2>
+    {% include "_filter_bulan.html" with uid="jenis" %}
+  </div>
+  <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <table class="min-w-full text-sm tabular-nums">
+      <caption class="sr-only">Total berkas per bagian menurut jenis berkas</caption>
+      <thead class="bg-blue-700 text-sm text-white [&_th[scope=colgroup]]:border-b [&_th[scope=colgroup]]:border-blue-500">
+        <tr class="text-center">
+          <th scope="col" rowspan="2" class="th">Bagian</th>
+          <th scope="colgroup" colspan="{{ rekap_js.jenis.kolom|length }}" class="th">Jenis</th>
+        </tr>
+        <tr class="text-center">
+          {% for k in rekap_js.jenis.kolom %}<th scope="col" class="th">{{ k }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody class="text-center text-slate-900 [&>tr:nth-child(even)]:bg-slate-50 [&>tr:hover]:bg-blue-50">
+        {% for baris in rekap_js.jenis.baris %}
+        <tr class="border-b border-slate-200">
+          <th scope="row" class="px-3 py-2 font-medium">{{ baris.unit.singkatan }}</th>
+          {% for n in baris.nilai %}<td class="px-3 py-2">{{ n }}</td>{% endfor %}
+        </tr>
+        {% empty %}
+        <tr><td colspan="{{ rekap_js.jenis.kolom|length|add:1 }}" class="px-3 py-4 text-slate-800">Akun ini belum punya unit kerja.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="border-t-2 border-blue-200 bg-blue-50 text-center font-semibold text-blue-900 [&>tr:last-child]:bg-blue-100">
+        <tr class="border-b border-slate-200">
+          <th scope="row" class="px-3 py-2">Jumlah</th>
+          {% for n in rekap_js.jenis.jumlah %}<td class="px-3 py-2">{{ n }}</td>{% endfor %}
+        </tr>
+        <tr>
+          <th scope="row" class="px-3 py-2">Total</th>
+          <td colspan="{{ rekap_js.jenis.kolom|length }}" class="px-3 py-2">{{ rekap_js.jenis.total_semua }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</section>
+
+<section id="rekap-sifat">
+  <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+    <h2 class="text-lg font-semibold text-slate-900">Total berkas per sifat</h2>
+    {% include "_filter_bulan.html" with uid="sifat" %}
+  </div>
+  <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <table class="min-w-full text-sm tabular-nums">
+      <caption class="sr-only">Total berkas per bagian menurut sifat berkas</caption>
+      <thead class="bg-blue-700 text-sm text-white [&_th[scope=colgroup]]:border-b [&_th[scope=colgroup]]:border-blue-500">
+        <tr class="text-center">
+          <th scope="col" rowspan="2" class="th">Bagian</th>
+          <th scope="colgroup" colspan="{{ rekap_js.sifat.kolom|length }}" class="th">Sifat</th>
+        </tr>
+        <tr class="text-center">
+          {% for k in rekap_js.sifat.kolom %}<th scope="col" class="th">{{ k }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody class="text-center text-slate-900 [&>tr:nth-child(even)]:bg-slate-50 [&>tr:hover]:bg-blue-50">
+        {% for baris in rekap_js.sifat.baris %}
+        <tr class="border-b border-slate-200">
+          <th scope="row" class="px-3 py-2 font-medium">{{ baris.unit.singkatan }}</th>
+          {% for n in baris.nilai %}<td class="px-3 py-2">{{ n }}</td>{% endfor %}
+        </tr>
+        {% empty %}
+        <tr><td colspan="{{ rekap_js.sifat.kolom|length|add:1 }}" class="px-3 py-4 text-slate-800">Akun ini belum punya unit kerja.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="border-t-2 border-blue-200 bg-blue-50 text-center font-semibold text-blue-900 [&>tr:last-child]:bg-blue-100">
+        <tr class="border-b border-slate-200">
+          <th scope="row" class="px-3 py-2">Jumlah</th>
+          {% for n in rekap_js.sifat.jumlah %}<td class="px-3 py-2">{{ n }}</td>{% endfor %}
+        </tr>
+        <tr>
+          <th scope="row" class="px-3 py-2">Total</th>
+          <td colspan="{{ rekap_js.sifat.kolom|length }}" class="px-3 py-2">{{ rekap_js.sifat.total_semua }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</section>
+
+</div>
+
+<section id="daftar-berkas" class="mt-10">
+  <h2 class="mb-3 text-lg font-semibold text-slate-900">Daftar isi berkas</h2>
+<form method="get" action="{% url 'dashboard' %}#daftar-berkas" x-data="{ bagian: '{{ bagian }}' }" class="mb-5">
+  <input type="hidden" name="tahun" value="{{ tahun }}">
+  <input type="hidden" name="bulan" value="{{ bulan_rekap|default:'' }}">
+
+  <!-- default submit buat Enter, jangan dihapus -->
+  <button type="submit" class="sr-only" tabindex="-1" aria-hidden="true">Cari</button>
+
+  <div class="flex flex-wrap items-end gap-3">
+    <div class="min-w-[14rem] grow basis-56">
       <label for="f-q" class="lbl">Cari</label>
-      <input id="f-q" type="search" name="q" value="{{ q }}" placeholder="Nomor surat atau perihal" class="field">
+      <input id="f-q" type="search" name="q" value="{{ q }}" placeholder="Nomor surat atau perihal" class="field !h-10">
     </div>
     {% if request.user.is_admin_role %}
     <div>
       <label for="f-bagian" class="lbl">Bagian</label>
-      <select id="f-bagian" name="bagian" x-model="bagian" class="field">
+      <select id="f-bagian" name="bagian" x-model="bagian" @change="$el.form.submit()" class="field !h-10 !w-auto">
         <option value="semua">Semua bagian</option>
         {% for u in units %}<option value="{{ u.pk }}"{% if bagian == u.pk|stringformat:"s" %} selected{% endif %}>{{ u.nama }}</option>{% endfor %}
       </select>
@@ -34,40 +217,25 @@
     {% endif %}
     <div>
       <label for="f-dari" class="lbl">Dari bulan</label>
-      <input id="f-dari" type="month" name="dari" value="{{ dari }}" class="field">
+      <input id="f-dari" type="month" name="dari" value="{{ dari }}" @change="$el.form.submit()" class="field !h-10 !w-44">
     </div>
     <div>
       <label for="f-sampai" class="lbl">Sampai bulan</label>
-      <input id="f-sampai" type="month" name="sampai" value="{{ sampai }}" class="field">
+      <input id="f-sampai" type="month" name="sampai" value="{{ sampai }}" @change="$el.form.submit()" class="field !h-10 !w-44">
     </div>
-  </div>
-
-  <div class="flex flex-wrap items-end justify-between gap-4 p-4">
-    <div class="flex flex-wrap items-end gap-4">
-      <div>
-        <label for="f-mode" class="lbl">Format export</label>
-        <select id="f-mode" name="mode" class="field">
-          <option value="per_bulan"{% if mode != 'gabung' %} selected{% endif %}>Satu tab per bulan</option>
-          <option value="gabung"{% if mode == 'gabung' %} selected{% endif %}>Semua bulan dalam satu tab</option>
-        </select>
-      </div>
-      {% if request.user.is_admin_role %}
-      <div x-show="bagian === 'semua'" x-cloak>
-        <label for="f-susunan" class="lbl">Susunan semua bagian</label>
-        <select id="f-susunan" name="susunan" class="field">
-          <option value="gabung"{% if susunan != 'terpisah' %} selected{% endif %}>Digabung jadi satu daftar</option>
-          <option value="terpisah"{% if susunan == 'terpisah' %} selected{% endif %}>Dipisah per bagian</option>
-        </select>
-      </div>
-      {% endif %}
+    <div>
+      <label for="f-mode" class="lbl">Format export</label>
+      <select id="f-mode" name="mode" @change="$el.form.submit()" class="field !h-10 !w-auto">
+        <option value="per_bulan"{% if mode != 'gabung' %} selected{% endif %}>Satu tab per bulan</option>
+        <option value="gabung"{% if mode == 'gabung' %} selected{% endif %}>Semua bulan dalam satu tab</option>
+      </select>
     </div>
-    <div class="flex gap-3">
-      <button type="submit" class="btn btn-outline">Tampilkan</button>
-      <button type="submit" formaction="{% url 'arsip_export' %}" class="btn btn-primary">Export Excel</button>
-    </div>
-    <p class="w-full text-xs text-slate-800">Pilih bulan yang sama untuk satu bulan, atau bulan berbeda untuk rentang. Kata kunci pencarian ikut terbawa ke hasil export.</p>
+    <button type="submit" formaction="{% url 'arsip_export' %}" class="btn btn-primary !h-10">Export Excel</button>
   </div>
 </form>
 
-{% include "arsip/_tabel.html" with tanpa_aksi=True %}
+  {% include "arsip/_tabel.html" with tanpa_aksi=True %}
+</section>
+
+</div>
 {% endblock %}

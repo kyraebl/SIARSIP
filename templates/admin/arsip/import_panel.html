@@ -1,0 +1,105 @@
+<style>
+  .im-panel { margin-bottom: 1rem; padding: 1rem; background: #fff; border: 1px solid #e2e8f0; border-radius: .5rem; }
+  .im-panel h3 { margin: 0 0 .75rem; font-size: .95rem; font-weight: 600; color: #0f172a; }
+  .im-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem; margin: 0; }
+  .im-form label { display: block; margin-bottom: .3rem; font-size: .75rem; font-weight: 500; color: #0f172a; }
+  .im-form select, .im-form input[type=file] {
+    min-width: 11rem; padding: .5rem .75rem; font-size: .875rem; color: #334155;
+    background: #fff; border: 1px solid #cbd5e1; border-radius: .375rem;
+  }
+  .im-form input[type=file] { min-width: 18rem; padding: .4rem .6rem; }
+  .im-form select:focus, .im-form input:focus { outline: none; border-color: #2A55A8; box-shadow: 0 0 0 2px #B9D1E8; }
+  .im-btn { padding: .55rem 1.1rem; font-size: .875rem; font-weight: 600; color: #fff; cursor: pointer; background: #2A55A8; border: 0; border-radius: .375rem; }
+  .im-btn:hover { background: #234A9A; }
+  .im-btn:disabled { opacity: .6; cursor: wait; }
+  .im-btn-ok { background: #059669; } .im-btn-ok:hover { background: #047857; }
+  .im-note { margin: .6rem 0 0; font-size: .75rem; color: #64748b; }
+  #im-loading { display: none; margin-top: .75rem; font-size: .875rem; color: #64748b; }
+  .im-msg { margin-top: 1rem; padding: .65rem .9rem; font-size: .875rem; border-radius: .5rem; border: 1px solid; }
+  .im-msg-err { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+  .im-msg-ok { color: #065f46; background: #ecfdf5; border-color: #a7f3d0; }
+  .im-msg-info { color: #1e40af; background: #eff6ff; border-color: #bfdbfe; }
+  .im-cards { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .75rem; margin-top: 1rem; }
+  @media (max-width: 767px) { .im-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .im-card { padding: .65rem .8rem; border: 1px solid #e2e8f0; border-radius: .5rem; }
+  .im-card p { margin: 0; }
+  .im-card .k { font-size: .75rem; color: #64748b; }
+  .im-card .v { margin-top: .25rem; font-size: 1.25rem; font-weight: 700; color: #0f172a; }
+  .im-green { color: #059669 !important; } .im-amber { color: #d97706 !important; } .im-red { color: #dc2626 !important; }
+  .im-chips { margin-top: .9rem; font-size: .75rem; color: #64748b; }
+  .im-chip { display: inline-block; margin: 0 .25rem .25rem 0; padding: .1rem .5rem; border-radius: 999px; background: #f1f5f9; color: #475569; }
+  .im-chip-warn { background: #fffbeb; color: #b45309; }
+  .im-filter { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; margin: 1.1rem 0 .4rem; }
+  .im-filter strong { font-size: .875rem; color: #0f172a; }
+  .im-tabs button { margin-left: .35rem; padding: .2rem .7rem; font-size: .75rem; font-weight: 500; color: #475569; background: #f1f5f9; border: 0; border-radius: 999px; cursor: pointer; }
+  .im-tabs button.on { color: #fff; background: #1e293b; }
+  .im-scroll { max-height: 24rem; overflow: auto; border: 1px solid #e2e8f0; border-radius: .5rem; }
+  .im-tbl { width: 100%; border-collapse: collapse; font-size: .75rem; text-align: left; color: #0f172a; }
+  .im-tbl thead th { position: sticky; top: 0; z-index: 1; padding: .5rem .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: #64748b; background: #f8fafc; box-shadow: 0 1px 0 #e2e8f0; }
+  .im-tbl td { padding: .5rem .75rem; vertical-align: top; border-top: 1px solid #f1f5f9; }
+  .im-tbl .nw { white-space: nowrap; }
+  .im-tbl .u { min-width: 18rem; }
+  .im-row-galat { background: #fef2f2; } .im-row-belum { background: #fffbeb; } .im-row-duplikat { background: #f8fafc; color: #94a3b8; }
+  .im-bad { background: #fecaca; font-weight: 500; color: #991b1b; } .im-warn { background: #fde68a; font-weight: 500; color: #78350f; }
+  .im-badge { display: inline-block; padding: .1rem .5rem; font-weight: 500; border-radius: 999px; }
+  .im-b-ok { background: #d1fae5; color: #047857; } .im-b-dup { background: #e2e8f0; color: #475569; }
+  .im-b-warn { background: #fde68a; color: #78350f; } .im-b-bad { background: #fecaca; color: #991b1b; }
+  .im-aksi { display: flex; justify-content: flex-end; margin-top: 1rem; }
+</style>
+
+<div class="im-panel">
+  <h3>Import Excel (Daftar Isi Berkas)</h3>
+  <form id="im-form" method="post" enctype="multipart/form-data" action="{% url 'admin:arsip_arsip_import' %}" class="im-form">
+    {% csrf_token %}
+    <div>
+      <label for="im-unit">Bagian tujuan</label>
+      <select name="unit" id="im-unit" required>
+        <option value="">Pilih bagian</option>
+        {% for u in export_units %}<option value="{{ u.pk }}">{{ u.nama }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="im-file">File Excel (.xlsx)</label>
+      <input type="file" name="file" id="im-file" accept=".xlsx" required>
+    </div>
+    <button type="submit" class="im-btn" id="im-cek">Cek file</button>
+  </form>
+  <p class="im-note">Semua tab (bulan) dibaca dan masuk ke bagian yang dipilih. Arsip yang sudah ada tidak diduplikasi. Klik Cek file dulu, data baru disimpan setelah tombol impor ditekan.</p>
+  <p id="im-loading">Memproses file, mohon tunggu...</p>
+  <div id="im-hasil"></div>
+</div>
+
+<script>
+(function () {
+  var form = document.getElementById('im-form');
+  var out = document.getElementById('im-hasil');
+  var load = document.getElementById('im-loading');
+
+  function kirim(simpan) {
+    var data = new FormData(form);
+    if (simpan) data.set('simpan', '1');
+    load.style.display = 'block';
+    out.innerHTML = '';
+    document.querySelectorAll('#im-cek, #im-hasil button').forEach(function (b) { b.disabled = true; });
+    fetch(form.action, { method: 'POST', body: data, credentials: 'same-origin' })
+      .then(function (r) { if (!r.ok) throw new Error(); return r.text(); })
+      .then(function (html) { out.innerHTML = html; })
+      .catch(function () { out.innerHTML = '<div class="im-msg im-msg-err">Gagal memproses file. Coba lagi.</div>'; })
+      .finally(function () { load.style.display = 'none'; document.getElementById('im-cek').disabled = false; });
+  }
+
+  form.addEventListener('submit', function (e) { e.preventDefault(); kirim(false); });
+  window.imSimpan = function () { kirim(true); };
+  window.imFilter = function (btn, mode) {
+    btn.parentNode.querySelectorAll('button').forEach(function (b) { b.classList.remove('on'); });
+    btn.classList.add('on');
+    out.querySelectorAll('.im-tbl tbody tr').forEach(function (tr) {
+      var s = tr.dataset.s;
+      var tampil = mode === 'semua' ||
+        (mode === 'cek' && (s === 'galat' || s === 'belum')) ||
+        (mode === 'siap' && (s === 'siap' || s === 'belum'));
+      tr.style.display = tampil ? '' : 'none';
+    });
+  };
+})();
+</script>

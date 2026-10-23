@@ -15,27 +15,27 @@
   </div>
 </div>
 
-<form role="search" aria-label="Filter daftar arsip" class="card mb-5 flex flex-wrap items-end gap-4 border-slate-300 bg-slate-200 p-4"
+<form role="search" aria-label="Filter daftar arsip" class="mb-5 flex flex-wrap items-end gap-3"
       hx-get="{% url 'arsip_list' %}" hx-target="#tabel" hx-indicator="#tabel" hx-sync="this:replace"
       hx-trigger="input delay:300ms, change, submit">
-  <div class="min-w-[14rem] grow basis-64">
+  <div class="min-w-[14rem] grow basis-56">
     <label for="f-q" class="lbl">Cari</label>
-    <input id="f-q" type="search" name="q" value="{{ q }}" placeholder="Kode, nomor surat, atau perihal" class="field">
+    <input id="f-q" type="search" name="q" value="{{ q }}" placeholder="Kode, nomor surat, atau perihal" class="field !h-10">
   </div>
   <div>
     <label for="f-bulan" class="lbl">Bulan</label>
-    <input id="f-bulan" type="month" name="bulan" value="{{ bulan }}" class="field">
+    <input id="f-bulan" type="month" name="bulan" value="{{ bulan }}" class="field !h-10 !w-44">
   </div>
-  <div class="min-w-[14rem] grow basis-64 sm:max-w-sm">
+  <div>
     <label for="f-kat" class="lbl">Kategori klasifikasi</label>
-    <select id="f-kat" name="kat" class="field">
+    <select id="f-kat" name="kat" class="field !h-10 !w-64">
       <option value="">Semua kategori</option>
       {% for k in kategori_list %}
       <option value="{{ k.kode }}"{% if kat == k.kode %} selected{% endif %}>{{ k.kode }}{% if k.nama %} — {{ k.nama }}{% endif %}</option>
       {% endfor %}
     </select>
   </div>
-  <a href="{% url 'arsip_list' %}" class="btn border border-slate-400 bg-white text-slate-900 hover:bg-slate-50">Atur ulang</a>
+  <button type="submit" class="sr-only" tabindex="-1">Cari</button>
 </form>
 
 <div id="tabel">{% include "arsip/_tabel.html" %}</div>

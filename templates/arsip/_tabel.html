@@ -9,18 +9,18 @@
 <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
   <table class="min-w-full text-sm">
     <caption class="sr-only">Daftar isi berkas arsip, dikelompokkan per kategori klasifikasi</caption>
-    <thead class="border-b border-slate-300 bg-slate-200 text-xs text-slate-900">
+    <thead class="bg-blue-700 text-sm text-white">
       <tr class="text-center">
         <th scope="col" class="th">No. berkas</th>
         <th scope="col" class="th">No. item</th>
         <th scope="col" class="th">Kode klasifikasi</th>
-        <th scope="col" class="th text-left">Uraian informasi</th>
+        <th scope="col" class="th">Uraian informasi</th>
         <th scope="col" class="th">Tanggal</th>
         <th scope="col" class="th">Jumlah</th>
         <th scope="col" class="th">Keterangan</th>
         <th scope="col" class="th">Keamanan<span class="sr-only"> dan akses arsip</span></th>
         {% if tampil_bagian %}<th scope="col" class="th">Bagian</th>{% endif %}
-        <th scope="col" class="th text-left">Catatan arsip</th>
+        <th scope="col" class="th">Catatan arsip</th>
         <th scope="col" class="th">Berkas</th>
         {% if not tanpa_aksi %}<th scope="col" class="th">Aksi</th>{% endif %}
       </tr>

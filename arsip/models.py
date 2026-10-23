@@ -40,7 +40,7 @@ class Arsip(models.Model):
         RAHASIA = "rahasia", "Rahasia"
 
     unit_kerja = models.ForeignKey(UnitKerja, on_delete=models.PROTECT, related_name="arsip")
-    kode_tujuan = models.ForeignKey(KodeTujuan, on_delete=models.PROTECT, null=True, blank=True)   # kosong = uraian bebas
+    kode_tujuan = models.ForeignKey(KodeTujuan, on_delete=models.PROTECT, null=True, blank=True)   
     kategori = models.ForeignKey(Kategori, on_delete=models.PROTECT)
     sub_kode = models.CharField(
         max_length=6, blank=True,
@@ -70,7 +70,7 @@ class Arsip(models.Model):
 
     @property
     def kode_klasifikasi(self):
-        if self.kode_tujuan_id is None:   # uraian bebas, contoh: KU 03
+        if self.kode_tujuan_id is None:   
             return f"{self.kategori.kode} {self.sub_kode}".strip()
         return f"{self.kategori.kode}{self.sub_kode}"
 

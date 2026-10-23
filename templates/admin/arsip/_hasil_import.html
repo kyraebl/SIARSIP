@@ -1,0 +1,75 @@
+{% if error %}
+<div class="im-msg im-msg-err">{{ error }}</div>
+{% else %}
+  {% if simpan %}
+  <div class="im-msg im-msg-ok"><strong>{{ hasil.diimpor }}</strong> arsip berhasil diimpor ke bagian {{ unit.nama }}.</div>
+  {% else %}
+  <div class="im-msg im-msg-info">Hasil pengecekan untuk bagian {{ unit.nama }}. Belum ada data yang disimpan.</div>
+  {% endif %}
+
+  <div class="im-cards">
+    <div class="im-card"><p class="k">Baris terbaca</p><p class="v">{{ hasil.total }}</p></div>
+    <div class="im-card"><p class="k">{% if simpan %}Berhasil diimpor{% else %}Siap diimpor{% endif %}</p><p class="v im-green">{% if simpan %}{{ hasil.diimpor }}{% else %}{{ hasil.bisa_impor }}{% endif %}</p></div>
+    <div class="im-card"><p class="k">Sudah ada (dilewati)</p><p class="v">{{ hasil.duplikat }}</p></div>
+    <div class="im-card"><p class="k">Nomor belum keluar</p><p class="v{% if hasil.belum_nomor %} im-amber{% endif %}">{{ hasil.belum_nomor }}</p></div>
+    <div class="im-card"><p class="k">Bermasalah</p><p class="v{% if hasil.galat %} im-red{% endif %}">{{ hasil.galat|length }}</p></div>
+  </div>
+
+  {% if hasil.lembar %}
+  <p class="im-chips">Tab yang dibaca:
+    {% for nama, jml in hasil.lembar %}<span class="im-chip">{{ nama }} ({{ jml }})</span>{% endfor %}
+  </p>
+  {% endif %}
+  {% if hasil.dilewati %}
+  <p class="im-chips">Tab dilewati karena tidak ada judul kolom Daftar Isi Berkas:
+    {% for nama in hasil.dilewati %}<span class="im-chip im-chip-warn">{{ nama }}</span>{% endfor %}
+  </p>
+  {% endif %}
+
+  {% if not simpan and hasil.baris %}
+  <div class="im-filter">
+    <strong>Preview data</strong>
+    <div class="im-tabs">
+      <button type="button" class="{% if not cek_awal %}on{% endif %}" onclick="imFilter(this, 'semua')">Semua ({{ hasil.baris|length }})</button>
+      <button type="button" class="{% if cek_awal %}on{% endif %}" onclick="imFilter(this, 'cek')">Perlu dicek ({{ hasil.perlu_dicek }})</button>
+      <button type="button" onclick="imFilter(this, 'siap')">Siap diimpor ({{ hasil.bisa_impor }})</button>
+    </div>
+  </div>
+  <p class="im-chips" style="margin-top:0">Merah: format salah, tidak diimpor. Kuning: nomor surat belum keluar, tetap diimpor dan dilengkapi nanti. Abu-abu: sudah ada di sistem.</p>
+  <div class="im-scroll">
+    <table class="im-tbl">
+      <thead>
+        <tr><th>Tab / Baris</th><th>Kode</th><th>Uraian informasi</th><th>Tanggal</th><th>Jml</th><th>Ket.</th><th>Keamanan</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for b in hasil.baris %}
+        <tr data-s="{{ b.status }}" class="im-row-{{ b.status }}"{% if cek_awal and b.status != 'galat' and b.status != 'belum' %} style="display:none"{% endif %}>
+          <td class="nw">{{ b.lembar }} / {{ b.baris }}</td>
+          <td class="nw{% if 'kode' in b.kolom %} im-bad{% endif %}">{{ b.kode|default:"-" }}</td>
+          <td class="u{% if 'uraian' in b.kolom %}{% if b.status == 'galat' %} im-bad{% else %} im-warn{% endif %}{% endif %}">{{ b.uraian }}</td>
+          <td class="nw{% if 'tanggal' in b.kolom %} im-bad{% endif %}">{{ b.tanggal|default:"(kosong)" }}</td>
+          <td class="nw">{{ b.jumlah }}</td>
+          <td class="nw{% if 'keterangan' in b.kolom %} im-bad{% endif %}">{{ b.keterangan|default:"-" }}</td>
+          <td class="nw{% if 'keamanan' in b.kolom %} im-bad{% endif %}">{{ b.keamanan|default:"-" }}</td>
+          <td style="min-width:12rem">
+            {% if b.status == 'siap' %}<span class="im-badge im-b-ok">Siap</span>
+            {% elif b.status == 'duplikat' %}<span class="im-badge im-b-dup">Sudah ada</span>
+            {% elif b.status == 'belum' %}<span class="im-badge im-b-warn">Nomor belum keluar</span><p style="margin:.25rem 0 0;color:#92400e">{{ b.alasan }}</p>
+            {% else %}<span class="im-badge im-b-bad">Perlu diperbaiki</span><p style="margin:.25rem 0 0;color:#b91c1c">{{ b.alasan }}</p>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <div class="im-aksi">
+    {% if simpan %}
+    <button type="button" class="im-btn" onclick="location.reload()">Selesai</button>
+    {% elif hasil.bisa_impor %}
+    <button type="button" class="im-btn im-btn-ok" onclick="imSimpan()">Impor {{ hasil.bisa_impor }} arsip sekarang</button>
+    {% endif %}
+  </div>
+{% endif %}
