@@ -17,7 +17,7 @@ DATABASES = {
     )
 }
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['siarsip.fly.dev', 'localhost', '127.0.0.1', '.fly.dev']
 
 # App Definistions
 INSTALLED_APPS = [
