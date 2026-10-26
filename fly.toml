@@ -34,4 +34,4 @@ PORT = "8080"
   url_prefix = '/static/'
 
 [deploy]
-release_command = "python manage.py migrate --noinput && python manage.py collectstatic --noinput"
+release_command = "python manage.py migrate --noinput"
