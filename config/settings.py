@@ -39,6 +39,7 @@ AUTH_USER_MODEL = "accounts.User"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -89,16 +90,14 @@ LOGIN_REDIRECT_URL = "dashboard"
 LOGOUT_REDIRECT_URL = "login"
 
 # Keamanan sesi login
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True   
-SESSION_COOKIE_AGE = 60 * 20             
-SESSION_SAVE_EVERY_REQUEST = True        
-SESSION_COOKIE_HTTPONLY = True           
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_AGE = 60 * 20
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
-
-DEBUG = config("DEBUG", default=False, cast=bool)
 
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
@@ -110,16 +109,13 @@ USE_I18N = True
 
 USE_TZ = True
 
+# File statis: sumber di static/, hasil collectstatic di staticfiles/
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
-
-MEDIA_ROOT = BASE_DIR / "private_media"   
+# Penyimpanan berkas arsip (harus didefinisikan SEBELUM STORAGES)
+MEDIA_ROOT = BASE_DIR / "private_media"
 MAX_UPLOAD_MB = 10
 
 USE_GDRIVE = config("USE_GDRIVE", default=False, cast=bool)
@@ -134,8 +130,15 @@ STORAGES = {
         "BACKEND": "arsip.storage.GoogleDriveStorage" if USE_GDRIVE
                    else "django.core.files.storage.FileSystemStorage",
     },
-    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
 }
+
+MAILERS = {
+    'default': {
+        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+    },
+}
+
 
 UNFOLD = {
     "SITE_TITLE": "SIARSIP Admin",
@@ -149,7 +152,7 @@ UNFOLD = {
     "SITE_URL": "/",
     "THEME": "light",
     "STYLES": [lambda request: static("admin-siarsip.css")],
-        "SIDEBAR": {
+    "SIDEBAR": {
         "show_search": False,
         "show_all_applications": False,
         "navigation": [
