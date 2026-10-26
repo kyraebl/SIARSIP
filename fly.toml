@@ -12,9 +12,6 @@ console_command = '/code/manage.py shell'
 [deploy]
   release_command = 'python manage.py migrate --noinput'
 
-[env]
-  PORT = '8000'
-
 [http_service]
 auto_start_machines = true
 auto_stop_machines = true
@@ -22,6 +19,9 @@ force_https = true
 internal_port = 8080
 min_machines_running = 0
 processes = [ "app" ]
+
+[env]
+PORT = "8080"
 
 [[vm]]
   memory = '1gb'
