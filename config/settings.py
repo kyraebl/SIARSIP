@@ -19,6 +19,8 @@ DATABASES = {
 
 ALLOWED_HOSTS = ['siarsip.fly.dev', 'localhost', '127.0.0.1', '.fly.dev']
 
+CSRF_TRUSTED_ORIGINS = ['https://siarsip.fly.dev']
+
 # App Definistions
 INSTALLED_APPS = [
     'unfold',
