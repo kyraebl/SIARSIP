@@ -19,7 +19,7 @@ DATABASES = {
     )
 }
 
-ALLOWED_HOSTS = [ 'localhost', '127.0.0.1:8000', 'https://siarsip-psi.vercel.app']
+ALLOWED_HOSTS = ['siarsip-psi.vercel.app', 'siarsip.web.id', 'localhost', '127.0.0.1']
 
 # App Definistions
 INSTALLED_APPS = [
