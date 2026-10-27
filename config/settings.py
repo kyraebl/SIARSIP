@@ -1,3 +1,6 @@
+import os
+import dj_database_url
+
 from decouple import config
 import dj_database_url
 from pathlib import Path
@@ -10,16 +13,13 @@ SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=False, cast=bool)
 
 DATABASES = {
-    "default": dj_database_url.parse(
-        config("DATABASE_URL"),
-        conn_max_age=60,
-        conn_health_checks=True,
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL'),
+        conn_max_age=600
     )
 }
 
-ALLOWED_HOSTS = ['siarsip.fly.dev', 'localhost', '127.0.0.1', '.fly.dev']
-
-CSRF_TRUSTED_ORIGINS = ['https://siarsip.fly.dev']
+ALLOWED_HOSTS = [ 'localhost', '127.0.0.1:8000', '*']
 
 # App Definistions
 INSTALLED_APPS = [

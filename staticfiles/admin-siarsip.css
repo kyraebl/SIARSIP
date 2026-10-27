@@ -1,0 +1,59 @@
+/* Samakan latar: sidebar putih, area konten slate-50 (sama kayak web) */
+#nav-sidebar,
+#nav-sidebar-inner {
+  background-color: #ffffff;
+}
+#main {
+  background-color: #f8fafc;
+}
+
+/* Header sidebar (logo + SIARSIP) seukuran web */
+#nav-sidebar-inner > div:first-child {
+  height: auto;
+  padding: 1.25rem;
+}
+#nav-sidebar-inner > div:first-child > div:first-child {
+  height: auto;
+  padding: 0;
+}
+#nav-sidebar-inner > div:first-child img {
+  height: 44px;
+}
+#nav-sidebar-inner > div:first-child .text-important {
+  font-size: 1.125rem !important;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: normal;
+  color: #183670;
+}
+
+/* Ukuran navigasi sidebar seperti web: lebar 256px (bawaan Unfold 288px), tinggi baris menu 40px */
+div:has(> div > #nav-sidebar),
+#nav-sidebar {
+  width: 256px !important;
+}
+#nav-sidebar-apps a {
+  height: 40px;
+}
+
+/* Tabel daftar (changelist) seperti tabel di web */
+#result_list thead th {
+  background-color: #234A9A;
+  color: #ffffff;
+  padding-top: .75rem;
+  padding-bottom: .75rem;
+}
+#result_list thead th a,
+#result_list thead th .sortoptions a {
+  color: #ffffff;
+}
+#result_list tbody {
+  background-color: #ffffff !important;
+}
+div:has(> #result_list) {
+  border-color: #e2e8f0;
+  border-radius: 0 0 .5rem .5rem;
+}
+#main .shadow-xs {
+  box-shadow: none;
+}
