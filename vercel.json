@@ -10,11 +10,5 @@
       "src": "/(.*)",
       "dest": "config/wsgi.py"
     }
-  ],
-  "crons": [
-    {
-      "path": "/",
-      "schedule": "*/5 * * * *"
-    }
   ]
 }
