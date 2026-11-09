@@ -1,5 +1,5 @@
 import os
-import dj_database_url
+from pathlib import Path
 
 from decouple import config
 import dj_database_url
@@ -9,12 +9,16 @@ from django.urls import reverse_lazy
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = '/media/'
+MAX_UPLOAD_MB = 10
+
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=False, cast=bool)
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
+        default=config('DATABASE_URL'),
         conn_max_age=600
     )
 }
@@ -104,8 +108,8 @@ USE_X_FORWARDED_HOST = True
 
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = not DEBUG
+    CSRF_COOKIE_SECURE = not DEBUG
     SECURE_HSTS_SECONDS = 31536000
 
 USE_I18N = True
@@ -117,10 +121,6 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
-# Penyimpanan berkas arsip (harus didefinisikan SEBELUM STORAGES)
-MEDIA_ROOT = BASE_DIR / "private_media"
-MAX_UPLOAD_MB = 10
-
 USE_GDRIVE = config("USE_GDRIVE", default=False, cast=bool)
 GDRIVE_CLIENT_ID = config("GDRIVE_CLIENT_ID", default="")
 GDRIVE_CLIENT_SECRET = config("GDRIVE_CLIENT_SECRET", default="")
@@ -130,8 +130,7 @@ GDRIVE_BUKA_DI_DRIVE = config("GDRIVE_BUKA_DI_DRIVE", default=False, cast=bool)
 
 STORAGES = {
     "default": {
-        "BACKEND": "arsip.storage.GoogleDriveStorage" if USE_GDRIVE
-                   else "django.core.files.storage.FileSystemStorage",
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
 }
@@ -152,7 +151,7 @@ UNFOLD = {
     "SITE_FAVICONS": [
         {"rel": "icon", "sizes": "64x64", "type": "image/png", "href": lambda request: static("favicon.png")},
     ],
-    "SITE_URL": "/",
+    "SITE_URL": None,
     "THEME": "light",
     "STYLES": [lambda request: static("admin-siarsip.css")],
     "SIDEBAR": {
@@ -161,6 +160,7 @@ UNFOLD = {
         "navigation": [
             {
                 "items": [
+                    {"title": "Kembali ke Web", "link": reverse_lazy("dashboard")},
                     {"title": "Pengguna", "link": reverse_lazy("admin:accounts_user_changelist")},
                     {"title": "Unit kerja", "link": reverse_lazy("admin:accounts_unitkerja_changelist")},
                     {

@@ -53,12 +53,11 @@ def _bulan_berikut(d):
 
 
 def _periode(request, qs):
-    """Ambil rentang bulan dari ?dari=&sampai=. Default: bulan terbaru yang punya data."""
+    """Ambil rentang bulan dari ?dari=&sampai=. Default: bulan berjalan."""
     awal = _bulan(request.GET.get("dari"))
     akhir = _bulan(request.GET.get("sampai"))
     if not awal:
-        terakhir = qs.aggregate(m=Max("tanggal"))["m"] or date.today()
-        awal = terakhir.replace(day=1)
+        awal = date.today().replace(day=1)
     akhir = akhir or awal
     if akhir < awal:
         awal, akhir = akhir, awal
