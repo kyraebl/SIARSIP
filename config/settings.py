@@ -9,8 +9,8 @@ from django.urls import reverse_lazy
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MAX_UPLOAD_MB = 10
 
 SECRET_KEY = config("SECRET_KEY")
@@ -23,7 +23,12 @@ DATABASES = {
     )
 }
 
-ALLOWED_HOSTS = ['siarsip.web.id', '.vercel.app', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['10.103.34.58', 'siarsip.web.id', '.vercel.app', 'localhost', '127.0.0.1']
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://10.103.34.58',
+    'http://siarsip.dsdan', 
+]
 
 # App Definistions
 INSTALLED_APPS = [
@@ -99,9 +104,9 @@ SESSION_COOKIE_AGE = 900
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
-SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = False
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
-CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = False
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True

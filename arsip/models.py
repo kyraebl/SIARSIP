@@ -1,3 +1,4 @@
+from fileinput import filename
 import uuid
 import os
 import re
@@ -6,13 +7,35 @@ import uuid
 from django.core.validators import FileExtensionValidator, RegexValidator
 from django.db import models
 from accounts.models import UnitKerja
+from accounts.models import User
 from master.models import KodeTujuan, Kategori
 
+def generate_file_path(instance, filename):
+    """
+    Fungsi ini akan menghasilkan struktur folder:
+    berkas/<Singkatan_Unit_Kerja>/<Kode_Klasifikasi>/<Nama_File_Asli>
+    Contoh: berkas/PI/KP/Surat_Cuti.pdf
+    """
+    
+    try:
+        nama_unit = instance.unit_kerja.singkatan.strip().upper()
+    except AttributeError:
+        nama_unit = "UMUM"
+
+    try:
+        klasifikasi = instance.kategori.kode.strip().upper()
+    except AttributeError:
+        klasifikasi = "LAINNYA"
+
+    file_path = os.path.join('berkas', str(nama_unit), str(klasifikasi), filename)
+    
+    return file_path
+
 def path_berkas(instance, filename):
-    """Awalan acak supaya tidak bentrok, nama asli dipertahankan supaya terbaca di Drive."""
-    dasar = os.path.splitext(os.path.basename(filename))[0]
+    """Menyimpan file ke dalam folder unit kerja dengan nama aslinya."""
+    dasar, ext = os.path.splitext(os.path.basename(filename))
     dasar = re.sub(r"[^\w\s().\-]", "", dasar).strip()[:45] or "berkas"
-    return f"berkas/{instance.unit_kerja_id}/{uuid.uuid4().hex}__{dasar}.pdf"
+    return f"berkas/{instance.unit_kerja_id}/{dasar}{ext}"
 
 class ArsipQuerySet(models.QuerySet):
     def untuk(self, user):
@@ -53,10 +76,7 @@ class Arsip(models.Model):
     jumlah = models.PositiveIntegerField(default=1)
     keterangan = models.CharField(max_length=10, choices=Keterangan.choices, default=Keterangan.ASLI)
     keamanan = models.CharField(max_length=10, choices=Keamanan.choices, default=Keamanan.TERBUKA)
-    berkas = models.FileField(
-        upload_to=path_berkas, blank=True,
-        validators=[FileExtensionValidator(["pdf"])],
-    )
+    berkas = models.FileField(upload_to=generate_file_path, null=True, blank=True)
     created_by = models.ForeignKey("accounts.User", on_delete=models.PROTECT, related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -80,10 +100,30 @@ class Arsip(models.Model):
         c = []
         if self.kode_tujuan_id and not self.nomor_surat:
             c.append(("nomor", "Nomor surat belum keluar"))
-        if not self.berkas:
+            
+        file_ada = False
+        if self.berkas:
+            import os
+            from django.conf import settings
+            full_path = os.path.join(settings.MEDIA_ROOT, self.berkas.name)
+            if os.path.exists(full_path):
+                file_ada = True
+                
+        if not file_ada:
             c.append(("berkas", "Soft file belum diunggah"))
+            
         return c
 
+    @property
+    def file_fisik_ada(self):
+        """Mengecek apakah file benar-benar ada di folder local"""
+        if not self.berkas:
+            return False
+        import os
+        from django.conf import settings
+        full_path = os.path.join(settings.MEDIA_ROOT, self.berkas.name)
+        return os.path.exists(full_path)
+    
     @property
     def warna_baris(self):
         """Kelas warna latar baris di tabel. Kosong kalau data sudah lengkap."""
