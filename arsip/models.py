@@ -40,6 +40,8 @@ def path_berkas(instance, filename):
 class ArsipQuerySet(models.QuerySet):
     def untuk(self, user):
         """Filter wewenang: admin lihat semua, staf hanya unitnya sendiri."""
+        if user.is_atasan:
+            return self.none()
         if user.is_admin_role:
             return self
         return self.filter(unit_kerja=user.unit_kerja)
@@ -143,7 +145,7 @@ class Arsip(models.Model):
             return self.perihal.strip()
         return (
             f"Surat {self.kode_tujuan.nama_jabatan} "
-            f"No: {self.kode_klasifikasi}-{self.kode_tujuan.kode}/{self.nomor_surat} "
+            f"Nomor: {self.kode_klasifikasi}-{self.kode_tujuan.kode}/{self.nomor_surat} "
             f"Hal {self.perihal.strip()}"
         )
 

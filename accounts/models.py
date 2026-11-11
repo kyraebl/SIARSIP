@@ -23,12 +23,17 @@ class User(AbstractUser):
     class Role(models.TextChoices):
         ADMIN = "admin", "Admin"
         STAF = "staf", "Staf"
+        ATASAN = "atasan", "Atasan"
 
     unit_kerja = models.ForeignKey(
         UnitKerja, null=True, blank=True,
         on_delete=models.PROTECT, related_name="users",
     )
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.STAF)
+
+    @property
+    def is_atasan(self):
+        return self.role == self.Role.ATASAN and not self.is_superuser
 
     @property
     def is_admin_role(self):

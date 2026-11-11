@@ -14,6 +14,10 @@
         {% for t in pilihan_tahun %}<option value="{{ t }}"{% if t == tahun %} selected{% endif %}>{{ t }}</option>{% endfor %}
       </select>
     </div>
+    {% if request.user.is_atasan or request.user.is_admin_role %}
+    <a href="{% url 'rekap_export' %}?tahun={{ tahun }}{% if bulan_rekap %}&bulan={{ bulan_rekap }}{% endif %}"
+       class="btn btn-primary !h-10">Export rekap Excel</a>
+    {% endif %}
   </form>
 </div>
 
@@ -191,6 +195,7 @@
 
 </div>
 
+{% if not atasan %}
 <section id="daftar-berkas" class="mt-10">
   <h2 class="mb-3 text-lg font-semibold text-slate-900">Daftar isi berkas</h2>
 <form method="get" action="{% url 'dashboard' %}#daftar-berkas" x-data="{ bagian: '{{ bagian }}' }" class="mb-5">
@@ -235,6 +240,7 @@
 
   {% include "arsip/_tabel.html" with tanpa_aksi=True %}
 </section>
+{% endif %}
 
 </div>
 {% endblock %}

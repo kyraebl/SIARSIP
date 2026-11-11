@@ -1,13 +1,22 @@
+import openpyxl
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from django.http import HttpResponse
+
 from accounts.models import UnitKerja
 from googleapiclient.errors import HttpError
 from django.conf import settings
 from django.http import FileResponse, Http404, HttpResponse
 from django.utils.formats import date_format
 from datetime import date
+from functools import wraps
+from io import BytesIO
 from itertools import accumulate, groupby
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
+
 from django.db.models import Max, Q, Sum
 from django.db.models.functions import ExtractMonth
 from django.shortcuts import get_object_or_404, redirect, render
@@ -15,13 +24,24 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from master.models import Kategori, KodeTujuan, Pengesah
-from .exports import BULAN, buat_excel, buat_excel_rekap, label_periode
+from openpyxl import Workbook
+from openpyxl.styles import Font
+
+from .exports import BULAN, KOTAK, TENGAH, buat_excel, buat_excel_rekap, label_periode
 from .forms import ArsipForm, ImportExcelForm
 from .importer import ImportGagal, proses_import
 from .models import Arsip
 
 URUTAN = ("kategori__urutan", "kategori__kode", "sub_kode", "tanggal", "id")
 
+def bukan_atasan(view):
+    """Atasan hanya boleh lihat rekap, tidak boleh menyentuh isi arsip."""
+    @wraps(view)
+    def _w(request, *a, **kw):
+        if request.user.is_atasan:
+            raise PermissionDenied
+        return view(request, *a, **kw)
+    return _w
 
 def susun_tabel(qs):
     """Kelompokkan per kategori > kode klasifikasi, lengkap dengan No. Berkas dan No. Item."""
@@ -193,6 +213,8 @@ def rekap_jenis_sifat(qs, units, tahun, bulan=None):
 @login_required
 def dashboard(request):
     qs, bagian, _ = _bagian(request, Arsip.objects.untuk(request.user))
+    atasan = request.user.is_atasan
+    dasar = Arsip.objects.all() if atasan else qs
     awal, akhir = _periode(request, qs)
     q = request.GET.get("q", "").strip()
     per = (_cari(_filter_periode(qs, awal, akhir), q)
@@ -200,9 +222,9 @@ def dashboard(request):
            .order_by(*URUTAN))
     today = date.today()
     stats = [
-        ("Total arsip", qs.count()),
+        ("Total arsip", dasar.count()),
         (f"Arsip bulan ini ({date_format(today, 'F Y')})",
-         qs.filter(tanggal__year=today.year, tanggal__month=today.month).count()),
+        dasar.filter(tanggal__year=today.year, tanggal__month=today.month).count()),
     ]
     admin = request.user.is_admin_role
     semua = Arsip.objects.all()   # tabel rekap menampilkan total seluruh bagian untuk semua akun
@@ -212,6 +234,7 @@ def dashboard(request):
     bulan = int(bulan) if bulan.isdigit() and 1 <= int(bulan) <= 12 else None
     return render(request, "dashboard.html", {
         "stats": stats,
+        "atasan": atasan,
         "rekap": rekap_bagian(semua, unit_rekap, tahun),
         "rekap_klas": rekap_klasifikasi(semua, unit_rekap, tahun, bulan),
         "rekap_js": rekap_jenis_sifat(semua, unit_rekap, tahun, bulan),
@@ -230,6 +253,63 @@ def dashboard(request):
         "susunan": request.GET.get("susunan", "gabung"),
         "tampil_bagian": admin and bagian == "semua",
     })
+
+@login_required
+def rekap_export(request):
+    """Export 4 tabel rekap (angka total saja) ke Excel. Untuk Atasan dan Admin."""
+    u = request.user
+    if not (u.is_atasan or u.is_admin_role):
+        raise PermissionDenied
+    semua = Arsip.objects.all()
+    tahun, _ = _tahun(request, semua)
+    bulan = request.GET.get("bulan", "")
+    bulan = int(bulan) if bulan.isdigit() and 1 <= int(bulan) <= 12 else None
+    units = UnitKerja.objects.order_by("id")
+    bag = rekap_bagian(semua, units, tahun)
+    klas = rekap_klasifikasi(semua, units, tahun, bulan)
+    js = rekap_jenis_sifat(semua, units, tahun, bulan)
+    periode = f"{tahun}, " + (BULAN[bulan - 1].title() if bulan else "Januari - Desember")
+
+    def sheet(ws, judul, kepala, baris, jumlah):
+        ws.append([judul])
+        ws["A1"].font = Font(bold=True, size=12)
+        ws.append([])
+        ws.append(["Bagian", *kepala, "Total"])
+        for nilai in baris:
+            ws.append([nilai[0].singkatan, *nilai[1], sum(nilai[1])])
+        ws.append(["Jumlah", *jumlah, sum(jumlah)])
+        for baris_ws in ws.iter_rows(min_row=3, max_row=ws.max_row):
+            for c in baris_ws:
+                c.border = KOTAK
+                c.alignment = TENGAH
+        for c in ws[3]:
+            c.font = Font(bold=True)
+        for c in ws[ws.max_row]:
+            c.font = Font(bold=True)
+        ws.column_dimensions["A"].width = 14
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Per Bagian"
+    sheet(ws, f"Total berkas per bagian, tahun {tahun}", [b.title() for b in BULAN],
+          [(b["unit"], b["bulan"]) for b in bag["baris"]], bag["jumlah"])
+    sheet(wb.create_sheet("Per Klasifikasi"), f"Total berkas per klasifikasi ({periode})",
+          klas["kategori"], [(b["unit"], b["kategori"]) for b in klas["baris"]], klas["jumlah"])
+    sheet(wb.create_sheet("Per Jenis"), f"Total berkas per jenis ({periode})",
+          js["jenis"]["kolom"], [(b["unit"], b["nilai"]) for b in js["jenis"]["baris"]],
+          js["jenis"]["jumlah"])
+    sheet(wb.create_sheet("Per Sifat"), f"Total berkas per sifat ({periode})",
+          js["sifat"]["kolom"], [(b["unit"], b["nilai"]) for b in js["sifat"]["baris"]],
+          js["sifat"]["jumlah"])
+
+    buf = BytesIO()
+    wb.save(buf)
+    resp = HttpResponse(
+        buf.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    resp["Content-Disposition"] = f'attachment; filename="Rekap Berkas {tahun}.xlsx"'
+    return resp
 
 @login_required
 def arsip_export(request):
@@ -273,6 +353,7 @@ def arsip_export(request):
 
 
 @login_required
+@bukan_atasan
 def arsip_list(request):
     qs = (Arsip.objects.untuk(request.user)
           .select_related("kategori", "kode_tujuan")
@@ -336,6 +417,7 @@ def arsip_form(request, pk=None):
     return render(request, "arsip/_modal_form.html", ctx)
 
 @login_required
+@bukan_atasan
 @require_POST
 def arsip_hapus(request, pk):
     obj = get_object_or_404(Arsip.objects.untuk(request.user), pk=pk)
@@ -398,3 +480,59 @@ def arsip_import(request):
     return render(request, "arsip/_hasil_import.html", {
         "hasil": hasil, "simpan": simpan,
     })
+
+@login_required
+def export_total_excel(request):
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="Total_Berkas_Per_Bagian.xlsx"'
+    
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Total Berkas"
+    
+    ws.append(['Bagian', 'Total Berkas'])
+    
+    data = Arsip.objects.values('bagian').annotate(total=Count('id'))
+    total_semua = 0
+    
+    for item in data:
+        ws.append([item['bagian'], item['total']])
+        total_semua += item['total']
+        
+    ws.append(['TOTAL KESELURUHAN', total_semua])
+    
+    wb.save(response)
+    return response
+
+def export_total_pdf(request):
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="Total_Berkas_Per_Bagian.pdf"'
+    
+    p = canvas.Canvas(response, pagesize=letter)
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(100, 750, "Laporan Total Berkas Per Bagian")
+    
+    p.setFont("Helvetica-Bold", 12)
+    y = 700
+    p.drawString(100, y, "Bagian")
+    p.drawString(350, y, "Total Berkas")
+    
+    p.setFont("Helvetica", 12)
+    data = Arsip.objects.values('bagian').annotate(total=Count('id'))
+    total_semua = 0
+    y -= 25
+    
+    for item in data:
+        p.drawString(100, y, str(item['bagian']))
+        p.drawString(350, y, str(item['total']))
+        total_semua += item['total']
+        y -= 20
+
+    p.setFont("Helvetica-Bold", 12)
+    y -= 10
+    p.drawString(100, y, "TOTAL KESELURUHAN")
+    p.drawString(350, y, str(total_semua))
+        
+    p.showPage()
+    p.save()
+    return response

@@ -249,7 +249,7 @@ def proses_import(file, user, simpan=False, unit=None):
                 m = POLA_BELUM_NOMOR.match(uraian)
                 belum = bool(m)
             if not m:
-                selesai(item, "galat", "Format uraian tidak dikenali. Harus berbentuk: Surat ... No: KODE-Tujuan/Nomor Hal ...", ["uraian"])
+                selesai(item, "galat", "Format uraian tidak dikenali. Harus berbentuk: Surat ... Nomor: KODE-Tujuan/Nomor Hal ...", ["uraian"])
                 continue
             item["kode"] = f"{m['kategori'].upper()}{m['sub']}"
             kat = kategori.get(m["kategori"].upper())

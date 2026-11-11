@@ -19,14 +19,18 @@ DEBUG = config("DEBUG", default=False, cast=bool)
 DATABASES = {
     'default': dj_database_url.config(
         default=config('DATABASE_URL'),
-        conn_max_age=600
+        conn_max_age=60,
+        conn_health_checks=True,
     )
 }
+DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
+DATABASES['default'].setdefault('OPTIONS', {})
+DATABASES['default']['OPTIONS']['connect_timeout'] = 30
 
-ALLOWED_HOSTS = ['10.103.34.58', 'siarsip.web.id', '.vercel.app', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['10.103.34.85', 'siarsip.web.id', '.vercel.app', 'localhost', '127.0.0.1']
 
 CSRF_TRUSTED_ORIGINS = [
-    'http://10.103.34.58',
+    'http://10.103.34.85',
     'http://siarsip.dsdan', 
 ]
 
@@ -108,13 +112,13 @@ SESSION_COOKIE_SECURE = False
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 CSRF_COOKIE_SECURE = False
 
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 
-if not DEBUG:
+USE_HTTPS = config("USE_HTTPS", default=False, cast=bool)
+
+if USE_HTTPS:
     SESSION_COOKIE_SECURE = True
-    SESSION_COOKIE_SECURE = not DEBUG
-    CSRF_COOKIE_SECURE = not DEBUG
+    CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 31536000
 
 USE_I18N = True

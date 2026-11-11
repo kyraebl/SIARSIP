@@ -14,6 +14,7 @@ admin.site.unregister(Group)
 PERAN = [
     (User.Role.STAF, "Staf bagian (hanya arsip bagiannya)"),
     (User.Role.ADMIN, "Admin (serba bisa)"),
+    (User.Role.ATASAN, "Atasan (hanya lihat rekap dan export)"),
 ]
 
 
@@ -92,7 +93,9 @@ class CustomUserAdmin(UserAdmin, ModelAdmin):
 
     @admin.display(description="Peran")
     def peran(self, obj):
-        return "Admin (serba bisa)" if obj.is_admin_role else "Staf bagian"
+        if obj.is_admin_role:
+            return "Admin (serba bisa)"
+        return "Atasan" if obj.role == User.Role.ATASAN else "Atasan" if obj.role == User.Role.ATASAN else "Staf bagian"
 
     def save_model(self, request, obj, form, change):
         admin_role = obj.role == User.Role.ADMIN
