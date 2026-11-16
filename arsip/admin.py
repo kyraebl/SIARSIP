@@ -10,7 +10,7 @@ from accounts.models import UnitKerja
 from .exports import BULAN
 from .forms import ImportExcelForm
 from .importer import ImportGagal, proses_import
-from .models import Arsip
+from .models import Arsip, ArsipInaktif
 from .views import _tahun, rekap_bagian, rekap_jenis_sifat, rekap_klasifikasi
 
 
@@ -112,3 +112,9 @@ class ArsipAdmin(ModelAdmin):
 
     def get_exclude(self, request, obj=None):
         return ("created_by",)
+
+@admin.register(ArsipInaktif)
+class ArsipInaktifAdmin(ModelAdmin):
+    list_display = ("kode", "uraian", "tahun", "box", "unit_kerja")
+    list_filter = ("unit_kerja", "tahun")
+    search_fields = ("kode", "indeks", "uraian")

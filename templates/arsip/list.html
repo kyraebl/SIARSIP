@@ -6,7 +6,59 @@
     <h1 class="text-2xl font-bold text-slate-900">Daftar Arsip Aktif</h1>
     <p class="mt-1 text-sm text-slate-800">Cari dan filter arsip berdasarkan kata kunci, bulan, atau kategori.</p>
   </div>
-  <div class="flex gap-3">
+  <div class="flex flex-wrap gap-3">
+    <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false">
+      <button type="button" class="btn btn-outline" @click="open = !open" :aria-expanded="open">
+        Export
+        <svg class="h-4 w-4" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+      </button>
+      <div x-show="open" x-cloak class="absolute right-0 z-30 mt-2 w-96 max-w-[90vw] rounded-xl border border-slate-200 bg-white p-4 shadow-lg">
+        <form method="get" action="{% url 'arsip_export' %}" class="space-y-3" x-data="{ bagian: 'semua' }">
+          {% if units %}
+          <div>
+            <label for="x-bagian" class="lbl">Bagian</label>
+            <select id="x-bagian" name="bagian" x-model="bagian" class="field !h-10">
+              <option value="semua">Semua bagian</option>
+              {% for u in units %}<option value="{{ u.pk }}">{{ u.nama }}</option>{% endfor %}
+            </select>
+          </div>
+          <div x-show="bagian === 'semua'">
+            <label for="x-susunan" class="lbl">Susunan semua bagian</label>
+            <select id="x-susunan" name="susunan" class="field !h-10">
+              <option value="gabung">Digabung jadi satu daftar</option>
+              <option value="terpisah">Dipisah per bagian</option>
+            </select>
+          </div>
+          {% endif %}
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="x-dari" class="lbl">Dari bulan</label>
+              <input id="x-dari" type="month" name="dari" value="{{ tahun_ini }}-01" class="field !h-10">
+            </div>
+            <div>
+              <label for="x-sampai" class="lbl">Sampai bulan</label>
+              <input id="x-sampai" type="month" name="sampai" value="{{ tahun_ini }}-12" class="field !h-10">
+            </div>
+          </div>
+          <div>
+            <label for="x-mode" class="lbl">Format</label>
+            <select id="x-mode" name="mode" class="field !h-10">
+              <option value="per_bulan">Satu tab per bulan</option>
+              <option value="gabung">Semua bulan dalam satu tab</option>
+            </select>
+          </div>
+          <div>
+            <label for="x-tipe" class="lbl">Tipe file</label>
+            <select id="x-tipe" name="tipe" class="field !h-10">
+              <option value="excel">Excel (.xlsx)</option>
+              <option value="pdf">PDF (.pdf)</option>
+            </select>
+          </div>
+          <p class="text-xs text-slate-600">Isi file mengikuti pilihan di kotak ini, bukan filter di halaman.</p>
+          <button type="submit" class="btn btn-primary w-full" @click="open = false">Download</button>
+        </form>
+      </div>
+    </div>
     <button type="button" hx-get="{% url 'arsip_import' %}" hx-target="#modal-root" class="btn btn-outline">Import Excel</button>
     <button type="button" hx-get="{% url 'arsip_tambah' %}" hx-target="#modal-root" class="btn btn-primary">
       <svg class="h-4 w-4" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>

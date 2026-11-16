@@ -161,3 +161,27 @@ class Arsip(models.Model):
 
     def __str__(self):
         return self.uraian[:80]
+
+class ArsipInaktif(models.Model):
+    unit_kerja = models.ForeignKey(UnitKerja, on_delete=models.PROTECT, related_name="arsip_inaktif")
+    no_berkas = models.PositiveBigIntegerField()
+    no_urut = models.PositiveBigIntegerField()
+    kode = models.CharField(max_length=20)
+    indeks = models.CharField("Indeks/Judul", max_length=150, blank=True)
+    uraian = models.TextField("Uraian masalah/kegiatan")
+    tahun = models.PositiveSmallIntegerField()
+    jumlah = models.PositiveIntegerField(default=1)
+    keterangan = models.CharField(max_length=10, choices=Arsip.Keterangan.choices, default=Arsip.Keterangan.ASLI)
+    box = models.CharField(max_length=20, blank=True)
+    keamanan = models.CharField("SKKAAD", max_length=10, choices=Arsip.Keamanan.choices, default=Arsip.Keamanan.TERBUKA)
+    lokasi_simpan = models.CharField(max_length=200, blank=True)
+
+    objects = ArsipQuerySet.as_manager()
+
+    class Meta:
+        verbose_name_plural = "Arsip inaktif"
+        ordering = ["kode", "no_urut", "id"]
+        indexes = [models.Index(fields=["unit_kerja", "tahun"])]
+
+    def __str__(self):
+        return f"{self.kode} {self.uraian[:60]}"

@@ -1,6 +1,5 @@
 import openpyxl
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
+
 from django.http import HttpResponse
 
 from accounts.models import UnitKerja
@@ -27,10 +26,9 @@ from master.models import Kategori, KodeTujuan, Pengesah
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
-from .exports import BULAN, KOTAK, TENGAH, buat_excel, buat_excel_rekap, label_periode
-from .forms import ArsipForm, ImportExcelForm
-from .importer import ImportGagal, proses_import
-from .models import Arsip
+from .exports import BULAN, KOTAK, TENGAH, buat_excel, buat_excel_inaktif, buat_excel_rekap, buat_pdf, buat_pdf_inaktif, label_periode
+from .forms import ArsipForm, ArsipInaktifForm, ImportExcelForm
+from .importer import ImportGagal, proses_import, proses_import_inaktif
 
 URUTAN = ("kategori__urutan", "kategori__kode", "sub_kode", "tanggal", "id")
 
@@ -129,6 +127,17 @@ def buat_lembar(data, unit, awal, akhir, mode, awalan=""):
                 hasil.append(tab(nama, b, b, grup))
             b = _bulan_berikut(b)
     return hasil
+
+def _kirim_file(request, lembar, nama_file, buat_excel_fn, buat_pdf_fn):
+    """Kirim hasil export sebagai Excel atau PDF sesuai ?tipe=. Isinya sama, hanya bentuk file."""
+    if request.GET.get("tipe") == "pdf":
+        data, jenis, ekstensi = buat_pdf_fn(lembar), "application/pdf", "pdf"
+    else:
+        data, ekstensi = buat_excel_fn(lembar), "xlsx"
+        jenis = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    resp = HttpResponse(data, content_type=jenis)
+    resp["Content-Disposition"] = f'attachment; filename="{nama_file}.{ekstensi}"'
+    return resp
 
 def _bagian(request, qs):
     """Filter bagian untuk admin: ?bagian=semua atau ?bagian=<id unit>. Staf selalu unitnya sendiri."""
@@ -335,22 +344,13 @@ def arsip_export(request):
 
     if not lembar:
         messages.error(request, "Tidak ada arsip pada periode yang dipilih.")
-        params = request.GET.copy()
-        params["dari"], params["sampai"] = f"{awal:%Y-%m}", f"{akhir:%Y-%m}"
-        return redirect(f"{reverse('dashboard')}?{params.urlencode()}")
+        return redirect("arsip_list")
 
     label = unit_pilih.singkatan if unit_pilih else "Semua Bagian"
-    data = buat_excel(lembar)
     nama_file = f"Daftar Isi Berkas {label} {awal:%Y-%m}"
     if akhir != awal:
         nama_file += f" sd {akhir:%Y-%m}"
-    resp = HttpResponse(
-        data,
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
-    resp["Content-Disposition"] = f'attachment; filename="{nama_file}.xlsx"'
-    return resp
-
+    return _kirim_file(request, lembar, nama_file, buat_excel, buat_pdf)
 
 @login_required
 @bukan_atasan
@@ -374,10 +374,121 @@ def arsip_list(request):
     ctx = {
         "grup": susun_tabel(qs), "jumlah": qs.count(), "q": q, "bulan": bulan, "kat": kat,
         "kategori_list": Kategori.objects.all(),
+        "tahun_ini": date.today().year,
+        "units": UnitKerja.objects.order_by("id") if request.user.is_admin_role else [],
     }
     if request.headers.get("HX-Request"):
         return render(request, "arsip/_tabel.html", ctx)
     return render(request, "arsip/list.html", ctx)
+
+def _inaktif_saring(request):
+    """Arsip inaktif sesuai wewenang dan filter (bagian untuk admin, tahun, kata kunci)."""
+    dasar = ArsipInaktif.objects.untuk(request.user)
+    qs, bagian, _ = _bagian(request, dasar)
+    q = request.GET.get("q", "").strip()
+    tahun = request.GET.get("tahun", "")
+    if tahun.isdigit():
+        qs = qs.filter(tahun=int(tahun))
+    if q:
+        qs = qs.filter(Q(uraian__icontains=q) | Q(kode__icontains=q) | Q(indeks__icontains=q))
+    qs = qs.select_related("unit_kerja").order_by("unit_kerja_id", "kode", "no_berkas", "no_urut", "id")
+    return dasar, qs, q, tahun, bagian
+
+@login_required
+@bukan_atasan
+def arsip_inaktif_list(request):
+    dasar, qs, q, tahun, bagian = _inaktif_saring(request)
+    admin = request.user.is_admin_role
+    ctx = {
+        "daftar": qs, "jumlah": qs.count(), "q": q, "tahun": tahun, "bagian": bagian,
+        "tahun_list": dasar.order_by("-tahun").values_list("tahun", flat=True).distinct(),
+        "tampil_bagian": admin and bagian == "semua",
+        "units": UnitKerja.objects.order_by("id") if admin else [],
+    }
+    if request.headers.get("HX-Request"):
+        return render(request, "arsip/_tabel_inaktif.html", ctx)
+    return render(request, "arsip/inaktif_list.html", ctx)
+
+@login_required
+@bukan_atasan
+def arsip_inaktif_form(request, pk=None):
+    if not request.headers.get("HX-Request"):
+        return redirect("arsip_inaktif_list")
+    user = request.user
+    obj = get_object_or_404(ArsipInaktif.objects.untuk(user), pk=pk) if pk else None
+    if not obj and not user.unit_kerja:
+        messages.error(request, "Akun ini belum punya unit kerja. Atur dulu lewat halaman admin.")
+        return HttpResponse(headers={"HX-Redirect": reverse("arsip_inaktif_list")})
+
+    form = ArsipInaktifForm(request.POST or None, instance=obj)
+    if request.method == "POST" and form.is_valid():
+        a = form.save(commit=False)
+        if not obj:
+            a.unit_kerja = user.unit_kerja
+        a.save()
+        messages.success(request, "Arsip inaktif berhasil disimpan.")
+        return HttpResponse(headers={"HX-Refresh": "true"})
+    judul = "Ubah Arsip Inaktif" if obj else "Tambah Arsip Inaktif"
+    return render(request, "arsip/_modal_form_inaktif.html", {"form": form, "judul": judul})
+
+@login_required
+@bukan_atasan
+@require_POST
+def arsip_inaktif_hapus(request, pk):
+    get_object_or_404(ArsipInaktif.objects.untuk(request.user), pk=pk).delete()
+    messages.success(request, "Arsip inaktif berhasil dihapus.")
+    return redirect("arsip_inaktif_list")
+
+@login_required
+@bukan_atasan
+def arsip_inaktif_import(request):
+    if not request.headers.get("HX-Request"):
+        return redirect("arsip_inaktif_list")
+    user = request.user
+    if not user.unit_kerja:
+        messages.error(request, "Akun ini belum punya unit kerja, jadi belum bisa import.")
+        return HttpResponse(headers={"HX-Redirect": reverse("arsip_inaktif_list")})
+
+    if request.method != "POST":
+        return render(request, "arsip/_modal_import_inaktif.html", {"max_mb": settings.MAX_UPLOAD_MB})
+
+    form = ImportExcelForm(request.POST, request.FILES)
+    if not form.is_valid():
+        return render(request, "arsip/_hasil_import_inaktif.html", {"error": form.errors["file"][0]})
+    simpan = request.POST.get("simpan") == "1"
+    try:
+        hasil = proses_import_inaktif(form.cleaned_data["file"], user, simpan=simpan)
+    except ImportGagal as e:
+        return render(request, "arsip/_hasil_import_inaktif.html", {"error": str(e)})
+    return render(request, "arsip/_hasil_import_inaktif.html", {"hasil": hasil, "simpan": simpan})
+
+@login_required
+@bukan_atasan
+def arsip_inaktif_export(request):
+    """Export arsip inaktif. mode per_tahun = satu tab per tahun, gabung = satu tab per bagian."""
+    _, qs, _, tahun, _ = _inaktif_saring(request)
+    per_unit = {}
+    for a in qs:
+        per_unit.setdefault(a.unit_kerja, []).append(a)
+    if not per_unit:
+        messages.error(request, "Tidak ada arsip inaktif untuk diexport.")
+        return redirect("arsip_inaktif_list")
+
+    lembar = []
+    for unit, daftar in per_unit.items():
+        if request.GET.get("mode", "per_tahun") == "per_tahun":
+            per_tahun = {}
+            for a in daftar:
+                per_tahun.setdefault(a.tahun, []).append(a)
+            for th in sorted(per_tahun):
+                lembar.append((f"{unit.singkatan} {th}", unit, per_tahun[th]))
+        else:
+            lembar.append((unit.singkatan, unit, daftar))
+
+    label = next(iter(per_unit)).singkatan if len(per_unit) == 1 else "Semua Bagian"
+    if tahun.isdigit():
+        label += f" {tahun}"
+    return _kirim_file(request, lembar, f"Daftar Arsip Inaktif {label}", buat_excel_inaktif, buat_pdf_inaktif)
 
 @login_required
 def arsip_form(request, pk=None):

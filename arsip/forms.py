@@ -2,7 +2,7 @@ from django import forms
 from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
 
-from .models import Arsip
+from .models import Arsip, ArsipInaktif
 
 INPUT = ("w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm "
          "text-slate-800 placeholder-slate-400 focus:border-blue-500 "
@@ -72,6 +72,32 @@ class ArsipForm(forms.ModelForm):
     def clean_nomor_surat(self):
         return self.cleaned_data["nomor_surat"].strip().upper()    
 
+class ArsipInaktifForm(forms.ModelForm):
+    class Meta:
+        model = ArsipInaktif
+        fields = ["no_berkas", "no_urut", "kode", "indeks", "uraian", "tahun",
+                  "jumlah", "keterangan", "box", "keamanan", "lokasi_simpan"]
+        labels = {
+            "no_berkas": "No. Berkas", "no_urut": "No. Urut", "kode": "Kode",
+            "indeks": "Indeks/Judul", "uraian": "Uraian Masalah/Kegiatan", "tahun": "Tahun",
+            "jumlah": "Jumlah (berkas)", "keterangan": "Asli/Copy", "box": "Box",
+            "keamanan": "SKKAAD", "lokasi_simpan": "Lokasi Simpan",
+        }
+        widgets = {
+            "kode": forms.TextInput(attrs={"placeholder": "HK0101"}),
+            "uraian": forms.Textarea(attrs={"rows": 3}),
+            "keterangan": forms.RadioSelect(attrs={"class": "accent-blue-600"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, f in self.fields.items():
+            if name != "keterangan":
+                f.widget.attrs["class"] = INPUT
+
+    def clean_kode(self):
+        return self.cleaned_data["kode"].strip().upper()
+    
 class ImportExcelForm(forms.Form):
     file = forms.FileField(
         label="File Excel (.xlsx)",

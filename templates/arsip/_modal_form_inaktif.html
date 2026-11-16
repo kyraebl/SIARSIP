@@ -1,0 +1,48 @@
+<div x-data="{ close() { document.getElementById('modal-root').innerHTML = '' } }" x-trap.noscroll="true"
+     @keydown.escape.window="close()" @click.self="close()"
+     role="dialog" aria-modal="true" aria-labelledby="modal-judul"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+  <form method="post" hx-post="{{ request.path }}" hx-target="#modal-root" hx-disabled-elt="#btn-simpan"
+        class="flex max-h-[92vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl">
+    {% csrf_token %}
+
+    <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+      <h2 id="modal-judul" class="text-lg font-semibold text-slate-900">{{ judul }}</h2>
+      <button type="button" @click="close()" aria-label="Tutup" class="-mr-2 rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700">
+        <svg class="h-5 w-5" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-5">
+      {% for e in form.non_field_errors %}<p role="alert" class="mb-3 text-sm text-red-700">{{ e }}</p>{% endfor %}
+      <div class="grid gap-4 sm:grid-cols-2">
+        {% include "arsip/_field.html" with f=form.no_berkas %}
+        {% include "arsip/_field.html" with f=form.no_urut %}
+        {% include "arsip/_field.html" with f=form.kode %}
+        {% include "arsip/_field.html" with f=form.tahun %}
+        <div class="sm:col-span-2">{% include "arsip/_field.html" with f=form.indeks %}</div>
+        <div class="sm:col-span-2">{% include "arsip/_field.html" with f=form.uraian %}</div>
+        {% include "arsip/_field.html" with f=form.jumlah %}
+        {% include "arsip/_field.html" with f=form.box %}
+        {% include "arsip/_field.html" with f=form.keamanan %}
+        <fieldset>
+          <legend class="mb-1.5 text-sm font-medium text-slate-700">Asli/Copy</legend>
+          <div class="flex gap-3">
+            {% for r in form.keterangan %}
+            <label class="flex flex-1 cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-blue-300">
+              {{ r.tag }} {{ r.choice_label }}
+            </label>
+            {% endfor %}
+          </div>
+          {% for e in form.keterangan.errors %}<p role="alert" class="mt-1 text-xs text-red-700">{{ e }}</p>{% endfor %}
+        </fieldset>
+        <div class="sm:col-span-2">{% include "arsip/_field.html" with f=form.lokasi_simpan %}</div>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+      <button type="button" @click="close()" class="btn border border-slate-300 bg-white font-medium text-slate-700 hover:bg-slate-50">Batal</button>
+      <button id="btn-simpan" type="submit" class="btn btn-primary disabled:opacity-60">Simpan</button>
+    </div>
+  </form>
+</div>

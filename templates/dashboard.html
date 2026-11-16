@@ -29,7 +29,6 @@
   </div>
   {% endfor %}
 </dl>
-<p class="mt-3 text-sm"><a href="#daftar-berkas" class="font-medium text-blue-700 hover:underline">Lompat ke Daftar isi berkas ↓</a></p>
 
 <section id="rekap-bagian" class="mt-8">
   <h2 class="mb-3 text-lg font-semibold text-slate-900">Total berkas per bagian</h2>
@@ -194,53 +193,6 @@
 </section>
 
 </div>
-
-{% if not atasan %}
-<section id="daftar-berkas" class="mt-10">
-  <h2 class="mb-3 text-lg font-semibold text-slate-900">Daftar isi berkas</h2>
-<form method="get" action="{% url 'dashboard' %}#daftar-berkas" x-data="{ bagian: '{{ bagian }}' }" class="mb-5">
-  <input type="hidden" name="tahun" value="{{ tahun }}">
-  <input type="hidden" name="bulan" value="{{ bulan_rekap|default:'' }}">
-
-  <!-- default submit buat Enter, jangan dihapus -->
-  <button type="submit" class="sr-only" tabindex="-1" aria-hidden="true">Cari</button>
-
-  <div class="flex flex-wrap items-end gap-3">
-    <div class="min-w-[14rem] grow basis-56">
-      <label for="f-q" class="lbl">Cari</label>
-      <input id="f-q" type="search" name="q" value="{{ q }}" placeholder="Nomor surat atau perihal" class="field !h-10">
-    </div>
-    {% if request.user.is_admin_role %}
-    <div>
-      <label for="f-bagian" class="lbl">Bagian</label>
-      <select id="f-bagian" name="bagian" x-model="bagian" @change="$el.form.submit()" class="field !h-10 !w-auto">
-        <option value="semua">Semua bagian</option>
-        {% for u in units %}<option value="{{ u.pk }}"{% if bagian == u.pk|stringformat:"s" %} selected{% endif %}>{{ u.nama }}</option>{% endfor %}
-      </select>
-    </div>
-    {% endif %}
-    <div>
-      <label for="f-dari" class="lbl">Dari bulan</label>
-      <input id="f-dari" type="month" name="dari" value="{{ dari }}" @change="$el.form.submit()" class="field !h-10 !w-44">
-    </div>
-    <div>
-      <label for="f-sampai" class="lbl">Sampai bulan</label>
-      <input id="f-sampai" type="month" name="sampai" value="{{ sampai }}" @change="$el.form.submit()" class="field !h-10 !w-44">
-    </div>
-    <div>
-      <label for="f-mode" class="lbl">Format export</label>
-      <select id="f-mode" name="mode" @change="$el.form.submit()" class="field !h-10 !w-auto">
-        <option value="per_bulan"{% if mode != 'gabung' %} selected{% endif %}>Satu tab per bulan</option>
-        <option value="gabung"{% if mode == 'gabung' %} selected{% endif %}>Semua bulan dalam satu tab</option>
-      </select>
-    </div>
-    <button type="submit" formaction="{% url 'arsip_export' %}" class="btn btn-primary !h-10">Export Excel</button>
-  </div>
-</form>
-
-  {% include "arsip/_tabel.html" with tanpa_aksi=True %}
-</section>
-{% endif %}
 
 </div>
 {% endblock %}

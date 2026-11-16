@@ -6,7 +6,7 @@ from django.db import transaction
 from openpyxl import load_workbook
 
 from master.models import Kategori, KodeTujuan
-from .models import Arsip
+from .models import Arsip, ArsipInaktif
 
 MAKS_BARIS = 5000
 
@@ -311,5 +311,148 @@ def proses_import(file, user, simpan=False, unit=None):
     if simpan and baru:
         with transaction.atomic():
             Arsip.objects.bulk_create(baru, batch_size=500)
+        hasil["diimpor"] = len(baru)
+    return hasil
+
+KATA_INAKTIF = [("urut", "no_urut"), ("berkas", "no_berkas"), ("kode", "kode"), ("indek", "indeks"),
+                ("uraian", "uraian"), ("tahun", "tahun"), ("jumlah", "jumlah"), ("asli", "keterangan"),
+                ("box", "box"), ("skkaad", "keamanan"), ("keamanan", "keamanan"), ("lokasi", "lokasi")]
+WAJIB_INAKTIF = {"kode", "uraian", "tahun", "no_berkas", "no_urut"}
+SUB_HEADER = {"asli/copy", "box", "skkaad", "lokasi simpan"}
+
+
+def _angka(v):
+    if isinstance(v, float) and v.is_integer():
+        v = int(v)
+    s = _teks(v)
+    return int(s) if s.isdigit() else None
+
+
+def _tahun_inaktif(v):
+    if isinstance(v, (date, datetime)):
+        return v.year
+    m = re.search(r"\d{4}", _teks(v))
+    return int(m.group()) if m else None
+
+
+def _cari_header_inaktif(rows):
+    """Header dua baris (judul kolom + sub-judul Keterangan). Kembalikan (baris header, kolom, baris data pertama)."""
+    for i, row in enumerate(rows[:25]):
+        teks = [_norm(c) for c in row]
+        if not (any("uraian" in t for t in teks) and "tahun" in teks):
+            continue
+        baris = [row]
+        mulai = i + 1
+        if i + 1 < len(rows) and SUB_HEADER & {_norm(c) for c in rows[i + 1]}:
+            baris.append(rows[i + 1])
+            mulai = i + 2
+        kol = {}
+        for b in baris:
+            for j, c in enumerate(b):
+                t = _norm(c)
+                for kata, nama in KATA_INAKTIF:
+                    if kata in t:
+                        kol.setdefault(nama, j)
+                        break
+        if WAJIB_INAKTIF <= set(kol):
+            return i, kol, mulai
+    return None, None, None
+
+
+def proses_import_inaktif(file, user, simpan=False, unit=None):
+    """Baca file Excel Daftar Arsip Inaktif. simpan=False hanya mengecek tanpa menyimpan."""
+    unit = unit or user.unit_kerja
+    hasil = {"lembar": [], "dilewati": [], "total": 0, "siap": 0, "duplikat": 0,
+             "galat": [], "diimpor": 0, "baris": []}
+
+    try:
+        wb = load_workbook(file, data_only=True)
+    except Exception:
+        raise ImportGagal("File tidak bisa dibaca. Pastikan formatnya .xlsx, tidak rusak, dan tidak diberi password.")
+
+    ada = {(k, b, u, t, _norm(ur)) for k, b, u, t, ur in ArsipInaktif.objects.filter(
+        unit_kerja=unit).values_list("kode", "no_berkas", "no_urut", "tahun", "uraian")}
+    baru = []
+
+    def selesai(item, status, alasan=""):
+        item.update(status=status, alasan=alasan)
+        hasil["baris"].append(item)
+        if status == "galat":
+            hasil["galat"].append({"lembar": item["lembar"], "baris": item["baris"], "alasan": alasan})
+        elif status == "duplikat":
+            hasil["duplikat"] += 1
+        else:
+            hasil["siap"] += 1
+
+    for ws in wb.worksheets:
+        rows = list(ws.iter_rows(values_only=True))
+        idx, kol, mulai = _cari_header_inaktif(rows)
+        if idx is None:
+            hasil["dilewati"].append(ws.title)
+            continue
+
+        jumlah_baris = 0
+        kode_lalu = indeks_lalu = ""
+        for n, row in enumerate(rows[mulai:], start=mulai + 1):
+            uraian = _teks(_ambil(row, kol["uraian"]))
+            if not uraian:
+                continue
+            jumlah_baris += 1
+            hasil["total"] += 1
+            if hasil["total"] > MAKS_BARIS:
+                raise ImportGagal(f"Terlalu banyak baris (maksimal {MAKS_BARIS} per file). Pecah file-nya dulu.")
+
+            kode = _teks(_ambil(row, kol["kode"])).upper().replace(" ", "") or kode_lalu
+            if kode != kode_lalu:
+                indeks_lalu = ""
+            kode_lalu = kode
+            indeks = _teks(_ambil(row, kol.get("indeks"))) or indeks_lalu
+            indeks_lalu = indeks
+
+            item = {"lembar": ws.title, "baris": n, "kode": kode, "uraian": uraian,
+                    "tahun": _teks(_ambil(row, kol["tahun"])),
+                    "jumlah": _teks(_ambil(row, kol.get("jumlah"))),
+                    "keterangan": _teks(_ambil(row, kol.get("keterangan"))),
+                    "box": _teks(_ambil(row, kol.get("box")))}
+
+            no_berkas = _angka(_ambil(row, kol["no_berkas"]))
+            no_urut = _angka(_ambil(row, kol["no_urut"]))
+            tahun = _tahun_inaktif(_ambil(row, kol["tahun"]))
+            ket = _keterangan(_ambil(row, kol.get("keterangan")))
+            kea = _keamanan(_ambil(row, kol.get("keamanan")))
+            box = item["box"]
+            lokasi = _teks(_ambil(row, kol.get("lokasi")))
+
+            if not kode:
+                selesai(item, "galat", "Kode kosong.")
+            elif no_berkas is None or no_urut is None:
+                selesai(item, "galat", "No. berkas dan No. urut harus berupa angka.")
+            elif tahun is None:
+                selesai(item, "galat", "Tahun kosong atau formatnya tidak terbaca.")
+            elif ket is None:
+                selesai(item, "galat", "Kolom Asli/Copy harus Asli atau Copy.")
+            elif kea is None:
+                selesai(item, "galat", "SKKAAD harus Biasa/Umum/Terbuka, Terbatas, atau Rahasia.")
+            elif len(kode) > 20 or len(indeks) > 150 or len(box) > 20 or len(lokasi) > 200:
+                selesai(item, "galat", "Kode, indeks, box, atau lokasi simpan terlalu panjang.")
+            else:
+                k = (kode, no_berkas, no_urut, tahun, _norm(uraian))
+                if k in ada:
+                    selesai(item, "duplikat", "Sudah ada di sistem, tidak diimpor lagi.")
+                    continue
+                ada.add(k)
+                baru.append(ArsipInaktif(
+                    unit_kerja=unit, no_berkas=no_berkas, no_urut=no_urut, kode=kode, indeks=indeks,
+                    uraian=uraian, tahun=tahun, jumlah=_jumlah(_ambil(row, kol.get("jumlah"))),
+                    keterangan=ket, box=box, keamanan=kea, lokasi_simpan=lokasi))
+                selesai(item, "siap")
+
+        hasil["lembar"].append((ws.title, jumlah_baris))
+
+    hasil["perlu_dicek"] = len(hasil["galat"])
+    hasil["bisa_impor"] = hasil["siap"]
+    if simpan and baru:
+        with transaction.atomic():
+            ArsipInaktif.objects.bulk_create(baru, batch_size=500)
         hasil["diimpor"] = len(baru)
     return hasil

@@ -13,4 +13,10 @@ urlpatterns = [
     path('export-total-excel/', views.export_total_excel, name='export_total_excel'),
     path('export-total-pdf/', views.export_total_pdf, name='export_total_pdf'),
     path("rekap/export/", views.rekap_export, name="rekap_export"),
+    path("arsip-inaktif/", views.arsip_inaktif_list, name="arsip_inaktif_list"),
+    path("arsip-inaktif/tambah/", views.arsip_inaktif_form, name="arsip_inaktif_tambah"),
+    path("arsip-inaktif/<int:pk>/ubah/", views.arsip_inaktif_form, name="arsip_inaktif_ubah"),
+    path("arsip-inaktif/<int:pk>/hapus/", views.arsip_inaktif_hapus, name="arsip_inaktif_hapus"),
+    path("arsip-inaktif/import/", views.arsip_inaktif_import, name="arsip_inaktif_import"),
+    path("arsip-inaktif/export/", views.arsip_inaktif_export, name="arsip_inaktif_export"),
 ]
