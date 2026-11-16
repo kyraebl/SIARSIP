@@ -15,3 +15,5 @@ google-auth-oauthlib
 gunicorn
 whitenoise
 reportlab
+argon2-cffi
+django-axes

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Akun dikunci sementara · SIARSIP{% endblock %}
+{% block body %}
+<div class="flex min-h-screen items-center justify-center bg-white p-8">
+  <div class="w-full max-w-sm text-center">
+    <h1 class="text-2xl font-bold text-slate-900">Terlalu banyak percobaan login</h1>
+    <p class="mt-3 text-sm text-slate-700">Demi keamanan, akun dikunci sementara. Coba lagi dalam 15 menit, atau hubungi admin kalau lupa password.</p>
+    <a href="{% url 'login' %}" class="mt-6 inline-block rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">Kembali ke halaman login</a>
+  </div>
+</div>
+{% endblock %}

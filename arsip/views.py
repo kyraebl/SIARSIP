@@ -26,7 +26,8 @@ from master.models import Kategori, KodeTujuan, Pengesah
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
-from .exports import BULAN, KOTAK, TENGAH, buat_excel, buat_excel_inaktif, buat_excel_rekap, buat_pdf, buat_pdf_inaktif, label_periode
+from .exports import BULAN, KOTAK, TENGAH, buat_excel, buat_excel_inaktif, buat_excel_rekap, buat_excel_rekap_gabung, buat_pdf_rekap, buat_pdf, buat_pdf_inaktif, label_periode
+from .models import Arsip, ArsipInaktif
 from .forms import ArsipForm, ArsipInaktifForm, ImportExcelForm
 from .importer import ImportGagal, proses_import, proses_import_inaktif
 
@@ -265,7 +266,7 @@ def dashboard(request):
 
 @login_required
 def rekap_export(request):
-    """Export 4 tabel rekap (angka total saja) ke Excel. Untuk Atasan dan Admin."""
+    """Export 4 tabel rekap (bagian, klasifikasi, jenis, sifat) dalam 1 sheet. ?tipe=pdf untuk PDF, default Excel."""
     u = request.user
     if not (u.is_atasan or u.is_admin_role):
         raise PermissionDenied
@@ -277,47 +278,29 @@ def rekap_export(request):
     bag = rekap_bagian(semua, units, tahun)
     klas = rekap_klasifikasi(semua, units, tahun, bulan)
     js = rekap_jenis_sifat(semua, units, tahun, bulan)
-    periode = f"{tahun}, " + (BULAN[bulan - 1].title() if bulan else "Januari - Desember")
+    periode = (BULAN[bulan - 1].title() if bulan else "Januari - Desember")
 
-    def sheet(ws, judul, kepala, baris, jumlah):
-        ws.append([judul])
-        ws["A1"].font = Font(bold=True, size=12)
-        ws.append([])
-        ws.append(["Bagian", *kepala, "Total"])
-        for nilai in baris:
-            ws.append([nilai[0].singkatan, *nilai[1], sum(nilai[1])])
-        ws.append(["Jumlah", *jumlah, sum(jumlah)])
-        for baris_ws in ws.iter_rows(min_row=3, max_row=ws.max_row):
-            for c in baris_ws:
-                c.border = KOTAK
-                c.alignment = TENGAH
-        for c in ws[3]:
-            c.font = Font(bold=True)
-        for c in ws[ws.max_row]:
-            c.font = Font(bold=True)
-        ws.column_dimensions["A"].width = 14
+    def blok(judul, kepala, baris, jumlah):
+        return {"judul": judul, "kepala": list(kepala),
+                "baris": [(unit.singkatan, nilai) for unit, nilai in baris], "jumlah": jumlah}
 
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Per Bagian"
-    sheet(ws, f"Total berkas per bagian, tahun {tahun}", [b.title() for b in BULAN],
-          [(b["unit"], b["bulan"]) for b in bag["baris"]], bag["jumlah"])
-    sheet(wb.create_sheet("Per Klasifikasi"), f"Total berkas per klasifikasi ({periode})",
-          klas["kategori"], [(b["unit"], b["kategori"]) for b in klas["baris"]], klas["jumlah"])
-    sheet(wb.create_sheet("Per Jenis"), f"Total berkas per jenis ({periode})",
-          js["jenis"]["kolom"], [(b["unit"], b["nilai"]) for b in js["jenis"]["baris"]],
-          js["jenis"]["jumlah"])
-    sheet(wb.create_sheet("Per Sifat"), f"Total berkas per sifat ({periode})",
-          js["sifat"]["kolom"], [(b["unit"], b["nilai"]) for b in js["sifat"]["baris"]],
-          js["sifat"]["jumlah"])
+    b_bagian = blok(f"Total berkas per bagian, tahun {tahun}", [b.title() for b in BULAN],
+                    [(b["unit"], b["bulan"]) for b in bag["baris"]], bag["jumlah"])
+    b_klas = blok(f"Total berkas per klasifikasi ({periode})", klas["kategori"],
+                  [(b["unit"], b["kategori"]) for b in klas["baris"]], klas["jumlah"])
+    b_jenis = blok(f"Total berkas per jenis ({periode})", js["jenis"]["kolom"],
+                   [(b["unit"], b["nilai"]) for b in js["jenis"]["baris"]], js["jenis"]["jumlah"])
+    b_sifat = blok(f"Total berkas per sifat ({periode})", js["sifat"]["kolom"],
+                   [(b["unit"], b["nilai"]) for b in js["sifat"]["baris"]], js["sifat"]["jumlah"])
 
-    buf = BytesIO()
-    wb.save(buf)
-    resp = HttpResponse(
-        buf.getvalue(),
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
-    resp["Content-Disposition"] = f'attachment; filename="Rekap Berkas {tahun}.xlsx"'
+    if request.GET.get("tipe") == "pdf":
+        data = buat_pdf_rekap(tahun, periode, b_bagian, b_klas, b_jenis, b_sifat)
+        jenis_file, ekstensi = "application/pdf", "pdf"
+    else:
+        data = buat_excel_rekap_gabung(tahun, periode, b_bagian, b_klas, b_jenis, b_sifat)
+        jenis_file, ekstensi = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "xlsx"
+    resp = HttpResponse(data, content_type=jenis_file)
+    resp["Content-Disposition"] = f'attachment; filename="Rekap Berkas {tahun}.{ekstensi}"'
     return resp
 
 @login_required
@@ -591,59 +574,3 @@ def arsip_import(request):
     return render(request, "arsip/_hasil_import.html", {
         "hasil": hasil, "simpan": simpan,
     })
-
-@login_required
-def export_total_excel(request):
-    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename="Total_Berkas_Per_Bagian.xlsx"'
-    
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Total Berkas"
-    
-    ws.append(['Bagian', 'Total Berkas'])
-    
-    data = Arsip.objects.values('bagian').annotate(total=Count('id'))
-    total_semua = 0
-    
-    for item in data:
-        ws.append([item['bagian'], item['total']])
-        total_semua += item['total']
-        
-    ws.append(['TOTAL KESELURUHAN', total_semua])
-    
-    wb.save(response)
-    return response
-
-def export_total_pdf(request):
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="Total_Berkas_Per_Bagian.pdf"'
-    
-    p = canvas.Canvas(response, pagesize=letter)
-    p.setFont("Helvetica-Bold", 14)
-    p.drawString(100, 750, "Laporan Total Berkas Per Bagian")
-    
-    p.setFont("Helvetica-Bold", 12)
-    y = 700
-    p.drawString(100, y, "Bagian")
-    p.drawString(350, y, "Total Berkas")
-    
-    p.setFont("Helvetica", 12)
-    data = Arsip.objects.values('bagian').annotate(total=Count('id'))
-    total_semua = 0
-    y -= 25
-    
-    for item in data:
-        p.drawString(100, y, str(item['bagian']))
-        p.drawString(350, y, str(item['total']))
-        total_semua += item['total']
-        y -= 20
-
-    p.setFont("Helvetica-Bold", 12)
-    y -= 10
-    p.drawString(100, y, "TOTAL KESELURUHAN")
-    p.drawString(350, y, str(total_semua))
-        
-    p.showPage()
-    p.save()
-    return response

@@ -433,3 +433,113 @@ def buat_pdf(lembar):
 def buat_pdf_inaktif(lembar):
     """lembar sama dengan buat_excel_inaktif: list (nama tab, unit, daftar)."""
     return _bangun_pdf([_cerita_inaktif(unit, daftar) for _, unit, daftar in lembar], "Daftar Arsip Inaktif")
+
+# ---------------------------------------------------------------------------
+# Rekap dashboard: 4 tabel (bagian, klasifikasi, jenis, sifat) dalam 1 file
+# blok = {"judul": str, "kepala": [str], "baris": [(nama_bagian, [angka])], "jumlah": [angka]}
+# ---------------------------------------------------------------------------
+_ISI_BIRU = PatternFill("solid", fgColor="DCE8F4")
+
+
+def _tulis_blok(ws, r, c, blok):
+    """Tulis satu tabel rekap mulai di (baris r, kolom c). Mengembalikan baris kosong berikutnya."""
+    kolom = 1 + len(blok["kepala"]) + 1  # Bagian + data + Total
+    ws.cell(r, c, blok["judul"]).font = Font(bold=True, size=12)
+    r += 1
+    for k, teks in enumerate(["Bagian", *blok["kepala"], "Total"]):
+        sel = ws.cell(r, c + k, teks)
+        sel.font = Font(bold=True)
+        sel.fill = _ISI_BIRU
+    ws.row_dimensions[r].height = max(ws.row_dimensions[r].height or 0, 45)
+    r += 1
+    for nama, nilai in blok["baris"]:
+        ws.cell(r, c, nama)
+        for k, v in enumerate(nilai, start=1):
+            ws.cell(r, c + k, v)
+        ws.cell(r, c + kolom - 1, sum(nilai))
+        r += 1
+    ws.cell(r, c, "Jumlah")
+    for k, v in enumerate(blok["jumlah"], start=1):
+        ws.cell(r, c + k, v)
+    ws.cell(r, c + kolom - 1, sum(blok["jumlah"]))
+    # border + rata tengah untuk seluruh tabel (header sampai jumlah)
+    for rr in range(r - len(blok["baris"]) - 1, r + 1):
+        for k in range(kolom):
+            sel = ws.cell(rr, c + k)
+            sel.border = KOTAK
+            sel.alignment = TENGAH
+    for k in range(kolom):
+        ws.cell(r, c + k).font = Font(bold=True)
+        ws.cell(r, c + k).fill = _ISI_BIRU
+    return r + 2
+
+
+def buat_excel_rekap_gabung(tahun, periode, bagian, klasifikasi, jenis, sifat):
+    """Satu file, satu sheet. Urutan: bagian, klasifikasi, lalu jenis & sifat berdampingan."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f"Rekap {tahun}"
+    ws["A1"] = f"REKAP TOTAL BERKAS {tahun} ({periode})"
+    ws["A1"].font = Font(bold=True, size=14)
+
+    r = 3
+    r = _tulis_blok(ws, r, 1, bagian)
+    r = _tulis_blok(ws, r, 1, klasifikasi)
+    # jenis (kolom A..D) dan sifat (mulai kolom F) sejajar di baris yang sama
+    _tulis_blok(ws, r, 1, jenis)
+    _tulis_blok(ws, r, 1 + (1 + len(jenis["kepala"]) + 1) + 1, sifat)
+
+    ws.column_dimensions["A"].width = 14
+    for k in range(2, 16):
+        ws.column_dimensions[get_column_letter(k)].width = 16
+
+    buf = BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def _tabel_rekap_pdf(blok, lebar):
+    """Tabel reportlab untuk satu blok, lebar = total lebar tabel (poin)."""
+    head = [_p(t, G_HEAD) for t in ["Bagian", *blok["kepala"], "Total"]]
+    rows = [head]
+    for nama, nilai in blok["baris"]:
+        rows.append([_p(nama, G_TENGAH), *[_p(str(v), G_TENGAH) for v in nilai], _p(str(sum(nilai)), G_TENGAH)])
+    G_TEBAL = _gaya(8, TA_CENTER, True)
+    rows.append([_p("Jumlah", G_TEBAL), *[_p(v, G_TEBAL) for v in blok["jumlah"]],
+                 _p(sum(blok["jumlah"]), G_TEBAL)])
+    n = len(head)
+    kolom_pertama = min(2.0 * cm, lebar * 0.2)
+    sisa = (lebar - kolom_pertama) / (n - 1)
+    t = Table(rows, colWidths=[kolom_pertama] + [sisa] * (n - 1), repeatRows=1)
+    t.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#DCE8F4")),
+        ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#DCE8F4")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    return t
+
+
+def buat_pdf_rekap(tahun, periode, bagian, klasifikasi, jenis, sifat):
+    """PDF landscape A4: bagian, klasifikasi, lalu jenis & sifat berdampingan."""
+    buf = BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=landscape(A4), leftMargin=PDF_MARGIN, rightMargin=PDF_MARGIN,
+                            topMargin=PDF_MARGIN, bottomMargin=PDF_MARGIN,
+                            title=f"Rekap Berkas {tahun}")
+    G_BLOK = _gaya(10, TA_LEFT, True)
+    cerita = [_p(f"REKAP TOTAL BERKAS {tahun} ({periode})", G_JUDUL), Spacer(1, 0.4 * cm)]
+
+    for blok in (bagian, klasifikasi):
+        cerita += [_p(blok["judul"], G_BLOK), Spacer(1, 0.15 * cm),
+                   _tabel_rekap_pdf(blok, PDF_LEBAR), Spacer(1, 0.5 * cm)]
+
+    setengah = (PDF_LEBAR - 1 * cm) / 2
+    kiri = [_p(jenis["judul"], G_BLOK), Spacer(1, 0.15 * cm), _tabel_rekap_pdf(jenis, setengah)]
+    kanan = [_p(sifat["judul"], G_BLOK), Spacer(1, 0.15 * cm), _tabel_rekap_pdf(sifat, setengah)]
+    sejajar = Table([[kiri, "", kanan]], colWidths=[setengah, 1 * cm, setengah])
+    sejajar.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
+                                 ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0)]))
+    cerita.append(KeepTogether([sejajar]))
+
+    doc.build(cerita)
+    return buf.getvalue()

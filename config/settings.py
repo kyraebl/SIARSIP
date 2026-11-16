@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from decouple import config
@@ -43,12 +44,33 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'axes',
     'accounts',
     'master',
     'arsip',
 ]
 
 AUTH_USER_MODEL = "accounts.User"
+
+# Hash password: Argon2 (kuat terhadap brute force GPU). Hash lama (PBKDF2) tetap bisa dipakai
+# login dan otomatis di-upgrade ke Argon2 begitu pemiliknya berhasil login.
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+]
+
+# django-axes: kunci login setelah gagal berulang (anti tebak password)
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+AXES_FAILURE_LIMIT = 5                       # gagal 5x -> dikunci
+AXES_COOLOFF_TIME = timedelta(minutes=15)    # kunci otomatis lepas setelah 15 menit
+AXES_LOCKOUT_PARAMETERS = ["username"]       # per akun (IP di balik proxy tidak bisa dipercaya)
+AXES_RESET_ON_SUCCESS = True
+AXES_LOCKOUT_TEMPLATE = "lockout.html"
+SILENCED_SYSTEM_CHECKS = ["axes.W006"]      # sengaja kunci per username, bukan per IP
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -59,6 +81,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'axes.middleware.AxesMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -87,6 +110,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 10},
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -112,6 +136,12 @@ SESSION_COOKIE_SECURE = False
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 CSRF_COOKIE_SECURE = False
 
+# Header keamanan
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = "DENY"
+SECURE_REFERRER_POLICY = "same-origin"
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
+
 USE_X_FORWARDED_HOST = True
 
 USE_HTTPS = config("USE_HTTPS", default=False, cast=bool)
@@ -120,6 +150,8 @@ if USE_HTTPS:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 USE_I18N = True
 
