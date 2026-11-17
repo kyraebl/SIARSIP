@@ -52,6 +52,67 @@
       .td { @apply border-b border-slate-100 px-2 py-2.5; }
     }
     [x-cloak] { display: none !important; }
+
+    /* Motion global: ringan, konsisten, dan tidak mengganggu */
+    @keyframes siarsip-fade-up {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    #konten {
+      animation: siarsip-fade-up .38s ease-out both;
+    }
+
+    /* Kartu dashboard dan panel */
+    .card {
+      transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: #B9D1E8;
+      box-shadow: 0 6px 16px rgba(35, 74, 154, .06);
+    }
+
+    /* Tombol: respons kecil saat hover dan ditekan */
+    .btn {
+      transition: color .18s ease, background-color .18s ease,
+                  border-color .18s ease, box-shadow .18s ease,
+                  transform .18s ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0) scale(.98); }
+
+    /* Navigasi desktop */
+    aside nav a {
+      transition: background-color .18s ease, color .18s ease,
+                  border-color .18s ease, transform .18s ease;
+    }
+    aside nav a:not([aria-current="page"]):hover {
+      transform: translateX(2px);
+    }
+
+    /* Baris tabel, termasuk hasil filter HTMX */
+    #tabel tbody tr {
+      animation: siarsip-fade-up .28s ease-out both;
+      transition: background-color .16s ease;
+    }
+
+    /* Modal dan backdrop yang dimuat ke #modal-root */
+    @keyframes siarsip-backdrop-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes siarsip-modal-in {
+      from { opacity: 0; transform: translateY(10px) scale(.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    #modal-root > [role="dialog"] {
+      animation: siarsip-backdrop-in .18s ease-out both;
+    }
+    #modal-root [role="dialog"] > form {
+      animation: siarsip-modal-in .24s ease-out both;
+    }
+
     #tabel.htmx-request { opacity: .55; transition: opacity .15s; }
   </style>
   <script>
