@@ -33,13 +33,119 @@
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/focus@3.14.8/dist/cdn.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+
   <style>
-    h1, h2 { font-family: Inter, system-ui, sans-serif; letter-spacing: -0.01em; }
-    :focus-visible { outline: 2px solid #3B7AB5; outline-offset: 2px; }
-    @media (prefers-reduced-motion: reduce) {
-      *, ::before, ::after { transition: none !important; animation: none !important; }
-    }
+      h1, h2 {
+          font-family: Inter, system-ui, sans-serif;
+          letter-spacing: -0.01em;
+      }
+
+      :focus-visible {
+          outline: 2px solid #3B7AB5;
+          outline-offset: 2px;
+      }
+
+      @keyframes siarsip-fade-up {
+          from {
+              opacity: 0;
+              transform: translateY(8px);
+          }
+          to {
+              opacity: 1;
+              transform: translateY(0);
+          }
+      }
+
+      #konten {
+          animation: siarsip-fade-up 0.38s ease-out both;
+      }
+
+      .card {
+          transition:
+              transform 0.22s ease,
+              box-shadow 0.22s ease,
+              border-color 0.22s ease;
+      }
+
+      .card:hover {
+          transform: translateY(-2px);
+          border-color: #B9D1E8;
+          box-shadow: 0 6px 16px rgba(35, 74, 154, 0.06);
+      }
+
+      .btn {
+          transition:
+              color 0.18s ease,
+              background-color 0.18s ease,
+              border-color 0.18s ease,
+              box-shadow 0.18s ease,
+              transform 0.18s ease;
+      }
+
+      .btn:hover {
+          transform: translateY(-1px);
+      }
+
+      .btn:active {
+          transform: translateY(0) scale(0.98);
+      }
+
+      aside nav a {
+          transition:
+              background-color 0.18s ease,
+              color 0.18s ease,
+              border-color 0.18s ease,
+              transform 0.18s ease;
+      }
+
+      aside nav a:not([aria-current="page"]):hover {
+          transform: translateX(2px);
+      }
+
+      #tabel tbody tr {
+          animation: siarsip-fade-up 0.28s ease-out both;
+          transition: background-color 0.16s ease;
+      }
+
+      @keyframes siarsip-backdrop-in {
+          from {
+              opacity: 0;
+          }
+          to {
+              opacity: 1;
+          }
+      }
+
+      @keyframes siarsip-modal-in {
+          from {
+              opacity: 0;
+              transform: translateY(10px) scale(0.985);
+          }
+          to {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+          }
+      }
+
+      #modal-root > [role="dialog"] {
+          animation: siarsip-backdrop-in 0.18s ease-out both;
+      }
+
+      #modal-root [role="dialog"] > form {
+          animation: siarsip-modal-in 0.24s ease-out both;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+          *, 
+          *::before, 
+          *::after {
+              scroll-behavior: auto !important;
+              transition: none !important;
+              animation: none !important;
+          }
+      }
   </style>
+
   <style type="text/tailwindcss">
     @layer components {
       .field { @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder-slate-500 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200; }
