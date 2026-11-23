@@ -1,3 +1,4 @@
+{% url 'admin:arsip_arsip_import' as im_url_aktif %}
 <style>
   .im-panel { margin-bottom: 1rem; padding: 1rem; background: #fff; border: 1px solid #e2e8f0; border-radius: .5rem; }
   .im-panel h3 { margin: 0 0 .75rem; font-size: .95rem; font-weight: 600; color: #0f172a; }
@@ -48,8 +49,8 @@
 </style>
 
 <div class="im-panel">
-  <h3>Import Excel (Daftar Isi Berkas)</h3>
-  <form id="im-form" method="post" enctype="multipart/form-data" action="{% url 'admin:arsip_arsip_import' %}" class="im-form">
+  <h3>{{ im_judul|default:"Import Excel (Daftar Isi Berkas)" }}</h3>
+  <form id="im-form" method="post" enctype="multipart/form-data" action="{{ im_action|default:im_url_aktif }}" class="im-form">
     {% csrf_token %}
     <div>
       <label for="im-unit">Bagian tujuan</label>
@@ -64,7 +65,7 @@
     </div>
     <button type="submit" class="im-btn" id="im-cek">Cek file</button>
   </form>
-  <p class="im-note">Semua tab (bulan) dibaca dan masuk ke bagian yang dipilih. Arsip yang sudah ada tidak diduplikasi. Klik Cek file dulu, data baru disimpan setelah tombol impor ditekan.</p>
+  <p class="im-note">Semua tab ({{ im_tab|default:"bulan" }}).</p>
   <p id="im-loading">Memproses file, mohon tunggu...</p>
   <div id="im-hasil"></div>
 </div>

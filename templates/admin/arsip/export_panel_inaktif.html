@@ -1,0 +1,56 @@
+{% url 'admin:arsip_arsipinaktif_import' as url_import_inaktif %}
+<style>
+  .exp-panel { margin-bottom: 1rem; padding: 1rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: .5rem; }
+  .exp-panel h3 { margin: 0 0 .75rem; font-size: .95rem; font-weight: 600; color: #0f172a; }
+  .exp-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem; }
+  .exp-form label { display: block; margin-bottom: .3rem; font-size: .75rem; font-weight: 500; color: #0f172a; }
+  .exp-form select, .exp-form input {
+    min-width: 11rem; padding: .5rem .75rem; font-size: .875rem; color: #334155;
+    background: #ffffff; border: 1px solid #cbd5e1; border-radius: .375rem;
+  }
+  .exp-form select:focus, .exp-form input:focus { outline: none; border-color: #2A55A8; box-shadow: 0 0 0 2px #B9D1E8; }
+  .exp-form option { color: #111827; background: #ffffff; }
+  .exp-form button {
+    padding: .55rem 1.1rem; font-size: .875rem; font-weight: 600; color: #fff; cursor: pointer;
+    background: #2A55A8; border: 0; border-radius: .375rem;
+  }
+  .exp-form button:hover { background: #234A9A; }
+  .exp-note { margin: .6rem 0 0; font-size: .75rem; color: #64748b; }
+</style>
+
+<div class="exp-panel">
+  <h3>Export (Daftar Arsip Inaktif)</h3>
+  <form method="get" action="{% url 'arsip_inaktif_export' %}" class="exp-form">
+    <div>
+      <label for="exp-bagian">Bagian</label>
+      <select name="bagian" id="exp-bagian">
+        <option value="semua">Semua bagian</option>
+        {% for u in export_units %}<option value="{{ u.pk }}">{{ u.nama }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="exp-tahun">Tahun</label>
+      <select name="tahun" id="exp-tahun">
+        <option value="">Semua tahun</option>
+        {% for t in export_tahun %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="exp-mode">Format</label>
+      <select name="mode" id="exp-mode">
+        <option value="per_tahun">Satu tab per tahun</option>
+        <option value="gabung">Semua tahun dalam satu tab</option>
+      </select>
+    </div>
+    <div>
+      <label for="exp-tipe">Tipe file</label>
+      <select name="tipe" id="exp-tipe">
+        <option value="excel">Excel (.xlsx)</option>
+        <option value="pdf">PDF (.pdf)</option>
+      </select>
+    </div>
+    <button type="submit">Download</button>
+  </form>
+  <p class="exp-note">Isi file tidak terpengaruh filter dan pencarian di bawah, hanya pilihan di kotak ini.</p>
+</div>
+{% include "admin/arsip/import_panel.html" with im_judul="Import Excel (Daftar Arsip Inaktif)" im_action=url_import_inaktif im_tab="tahun" %}

@@ -28,10 +28,10 @@ DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
 DATABASES['default'].setdefault('OPTIONS', {})
 DATABASES['default']['OPTIONS']['connect_timeout'] = 30
 
-ALLOWED_HOSTS = ['10.103.34.85', 'siarsip.web.id', '.vercel.app', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['10.103.34.89', 'siarsip.web.id', '.vercel.app', 'localhost', '127.0.0.1']
 
 CSRF_TRUSTED_ORIGINS = [
-    'http://10.103.34.85',
+    'http://10.103.34.89:8000',
     'http://siarsip.dsdan', 
 ]
 
@@ -135,6 +135,8 @@ SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_SECURE = False
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 CSRF_COOKIE_SECURE = False
+CSRF_COOKIE_NAME = "siarsip_csrftoken"
+SESSION_COOKIE_NAME = "siarsip_sessionid"
 
 # Header keamanan
 SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -201,25 +203,43 @@ UNFOLD = {
         "navigation": [
             {
                 "items": [
-                    {"title": "Kembali ke Web", "link": reverse_lazy("dashboard")},
-                    {"title": "Pengguna", "link": reverse_lazy("admin:accounts_user_changelist")},
-                    {"title": "Unit kerja", "link": reverse_lazy("admin:accounts_unitkerja_changelist")},
+                    {
+                        "title": "Website",
+                        "icon": "language",
+                        "link": reverse_lazy("dashboard"),
+                        "active": lambda request: False,
+                    },
                     {
                         "title": "Dashboard",
+                        "icon": "home",
                         "link": reverse_lazy("admin:arsip_arsip_dashboard"),
                         "active": lambda request: request.path == str(reverse_lazy("admin:arsip_arsip_dashboard")),
                     },
                     {
-                        "title": "Arsip",
+                        "title": "Daftar Arsip Aktif",
+                        "icon": "description",
                         "link": reverse_lazy("admin:arsip_arsip_changelist"),
                         "active": lambda request: (
                             request.path.startswith(str(reverse_lazy("admin:arsip_arsip_changelist")))
                             and request.path != str(reverse_lazy("admin:arsip_arsip_dashboard"))
                         ),
                     },
-                    {"title": "Kategori klasifikasi", "link": reverse_lazy("admin:master_kategori_changelist")},
-                    {"title": "Pejabat penandatanganan", "link": reverse_lazy("admin:master_kodetujuan_changelist")},
-                    {"title": "Pengesah", "link": reverse_lazy("admin:master_pengesah_changelist")},
+                    {
+                        "title": "Daftar Arsip Inaktif",
+                        "icon": "inventory_2",
+                        "link": reverse_lazy("admin:arsip_arsipinaktif_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": "Pengaturan",
+                "collapsible": True,
+                "items": [
+                    {"title": "Pengguna", "icon": "group", "link": reverse_lazy("admin:accounts_user_changelist")},
+                    {"title": "Unit kerja", "icon": "apartment", "link": reverse_lazy("admin:accounts_unitkerja_changelist")},
+                    {"title": "Kategori klasifikasi", "icon": "category", "link": reverse_lazy("admin:master_kategori_changelist")},
+                    {"title": "Pejabat penandatanganan", "icon": "draw", "link": reverse_lazy("admin:master_kodetujuan_changelist")},
+                    {"title": "Pengesah", "icon": "verified", "link": reverse_lazy("admin:master_pengesah_changelist")},
                 ],
             },
         ],

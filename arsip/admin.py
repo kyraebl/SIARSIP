@@ -12,7 +12,8 @@ from .forms import ImportExcelForm
 from .importer import ImportGagal, proses_import
 from .models import Arsip, ArsipInaktif
 from .views import _tahun, rekap_bagian, rekap_jenis_sifat, rekap_klasifikasi
-
+from unfold.decorators import display
+from .importer import ImportGagal, proses_import, proses_import_inaktif
 
 @admin.register(Arsip)
 class ArsipAdmin(ModelAdmin):
@@ -115,6 +116,73 @@ class ArsipAdmin(ModelAdmin):
 
 @admin.register(ArsipInaktif)
 class ArsipInaktifAdmin(ModelAdmin):
-    list_display = ("kode", "uraian", "tahun", "box", "unit_kerja")
+    list_display = (
+        "no_berkas_", "no_urut_", "kode", "indeks", "uraian", "tahun",
+        "jumlah_", "asli_copy", "box", "keamanan", "lokasi_simpan_", "bagian",
+    )
     list_filter = ("unit_kerja", "tahun")
     search_fields = ("kode", "indeks", "uraian")
+
+    list_before_template = "admin/arsip/export_panel_inaktif.html"
+
+    def get_urls(self):
+        custom = [
+            path("import/", self.admin_site.admin_view(self.import_view),
+                 name="arsip_arsipinaktif_import"),
+        ]
+        return custom + super().get_urls()
+
+    def import_view(self, request):
+        """Import Excel arsip inaktif dari admin. Bagian tujuan dipilih manual."""
+        if request.method != "POST" or not self.has_add_permission(request):
+            raise PermissionDenied
+        tmpl = "admin/arsip/_hasil_import_inaktif.html"
+        uid = request.POST.get("unit", "")
+        unit = UnitKerja.objects.filter(pk=uid).first() if uid.isdigit() else None
+        if not unit:
+            return render(request, tmpl, {"error": "Pilih bagian tujuan dulu."})
+        form = ImportExcelForm(request.POST, request.FILES)
+        if not form.is_valid():
+            return render(request, tmpl, {"error": form.errors["file"][0]})
+        simpan = request.POST.get("simpan") == "1"
+        try:
+            hasil = proses_import_inaktif(form.cleaned_data["file"], request.user, simpan=simpan, unit=unit)
+        except ImportGagal as e:
+            return render(request, tmpl, {"error": str(e)})
+        return render(request, tmpl, {
+            "hasil": hasil, "simpan": simpan, "unit": unit, "cek_awal": bool(hasil["galat"]),
+        })
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = {
+            **(extra_context or {}),
+            "export_units": UnitKerja.objects.order_by("id"),
+            "export_tahun": ArsipInaktif.objects.order_by("-tahun").values_list("tahun", flat=True).distinct(),
+        }
+        return super().changelist_view(request, extra_context=extra_context)
+
+    @display(description="No. berkas", ordering="no_berkas")
+    def no_berkas_(self, obj):
+        return obj.no_berkas
+
+    @display(description="No. urut", ordering="no_urut")
+    def no_urut_(self, obj):
+        return obj.no_urut
+
+    @display(description="Jumlah", ordering="jumlah")
+    def jumlah_(self, obj):
+        return f"{obj.jumlah} berkas"
+
+    @display(description="Asli/Copy", ordering="keterangan")
+    def asli_copy(self, obj):
+        return obj.get_keterangan_display()
+
+    @display(description="Lokasi simpan", ordering="lokasi_simpan")
+    def lokasi_simpan_(self, obj):
+        return obj.lokasi_simpan
+
+    @display(description="Bagian", ordering="unit_kerja__singkatan")
+    def bagian(self, obj):
+        return obj.unit_kerja.singkatan
+
+    

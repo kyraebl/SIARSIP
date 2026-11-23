@@ -86,7 +86,7 @@ class Arsip(models.Model):
     objects = ArsipQuerySet.as_manager()
 
     class Meta:
-        verbose_name_plural = "Arsip"
+        verbose_name_plural = "Daftar Arsip Aktif"
         ordering = ["kategori__kode", "sub_kode", "tanggal"]
         indexes = [models.Index(fields=["unit_kerja", "tanggal"])]
 
@@ -179,7 +179,7 @@ class ArsipInaktif(models.Model):
     objects = ArsipQuerySet.as_manager()
 
     class Meta:
-        verbose_name_plural = "Arsip inaktif"
+        verbose_name_plural = "Daftar Arsip Inaktif"
         ordering = ["kode", "no_urut", "id"]
         indexes = [models.Index(fields=["unit_kerja", "tahun"])]
 

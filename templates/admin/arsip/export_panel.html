@@ -49,7 +49,14 @@
         <option value="gabung">Semua bulan dalam satu tab</option>
       </select>
     </div>
-    <button type="submit">Export Excel</button>
+    <div>
+      <label for="exp-tipe">Tipe file</label>
+      <select name="tipe" id="exp-tipe">
+        <option value="excel">Excel (.xlsx)</option>
+        <option value="pdf">PDF (.pdf)</option>
+      </select>
+    </div>
+    <button type="submit">Download</button>
   </form>
   <p class="exp-note">Isi file tidak terpengaruh filter dan pencarian di bawah, hanya pilihan di kotak ini.</p>
 </div>
