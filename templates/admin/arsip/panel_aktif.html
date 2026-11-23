@@ -24,6 +24,15 @@
   .pa-submit { width: 100%; height: 2.5rem; font-size: .875rem; font-weight: 600; color: #fff; cursor: pointer; background: #2A55A8; border: 0; border-radius: .5rem; }
   .pa-submit:hover { background: #234A9A; }
   .pa-submit:disabled { opacity: .6; cursor: wait; }
+
+  .pa-filter { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem; margin-top: 1.25rem; }
+  .pa-grow { flex: 1 1 14rem; min-width: 14rem; }
+  .pa-filter label { display: block; margin: 0 0 .3rem; font-size: .875rem; font-weight: 500; color: #0f172a; }
+  .pa-filter input[type=search], .pa-filter input[type=month], .pa-filter select { box-sizing: border-box; height: 2.5rem; padding: .45rem .75rem; font-size: 1rem; color: #334155; background: #fff; border: 1px solid #cbd5e1; border-radius: .5rem; }
+  .pa-filter input[type=search] { width: 100%; }
+  .pa-filter input[type=month] { width: 11rem; }
+  .pa-filter select { width: 16rem; }
+  .pa-filter input:focus, .pa-filter select:focus { outline: none; border-color: #2A55A8; box-shadow: 0 0 0 2px #B9D1E8; }
 </style>
 
 <div class="pa-card">
@@ -110,6 +119,28 @@
       </a>
     </div>
   </div>
+
+  <form id="pa-filter" class="pa-filter" method="get" action="{{ request.path }}" role="search" aria-label="Filter daftar arsip">
+    <div class="pa-grow">
+      <label for="pa-q">Cari</label>
+      <input id="pa-q" type="search" name="q" value="{{ pa_q }}" placeholder="Kode, nomor surat, atau perihal">
+    </div>
+    <div>
+      <label for="pa-bulan">Bulan</label>
+      <input id="pa-bulan" type="month" value="{{ pa_bulan }}">
+    </div>
+    <div>
+      <label for="pa-kat">Kategori klasifikasi</label>
+      <select id="pa-kat" name="kategori__kode">
+        <option value="">Semua kategori</option>
+        {% for k in pa_kategori %}
+        <option value="{{ k.kode }}"{% if pa_kat == k.kode %} selected{% endif %}>{{ k.kode }}{% if k.nama %} &mdash; {{ k.nama }}{% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <input type="hidden" name="tanggal__year" id="pa-th">
+    <input type="hidden" name="tanggal__month" id="pa-tm">
+  </form>
 </div>
 
 {% include "admin/arsip/import_panel.html" with compact=True %}
@@ -129,5 +160,24 @@
   document.getElementById('im-form').addEventListener('submit', function () {
     this.closest('details').open = false;
   });
+
+  var f = document.getElementById('pa-filter');
+  var bulan = document.getElementById('pa-bulan');
+  var th = document.getElementById('pa-th');
+  var tm = document.getElementById('pa-tm');
+  var campur = f.querySelectorAll('input[name], select[name]');
+  function kirim() { f.requestSubmit(); }
+  f.addEventListener('submit', function () {
+    var v = bulan.value;
+    if (v) { var p = v.split('-'); th.value = p[0]; tm.value = parseInt(p[1], 10); }
+    else { th.value = ''; tm.value = ''; }
+    campur.forEach(function (el) { el.disabled = (el.value === ''); });
+  });
+  window.addEventListener('pageshow', function () {
+    campur.forEach(function (el) { el.disabled = false; });
+  });
+  bulan.addEventListener('change', kirim);
+  document.getElementById('pa-kat').addEventListener('change', kirim);
+  document.getElementById('pa-q').addEventListener('search', function () { if (this.value === '') kirim(); });
 })();
 </script>

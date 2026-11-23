@@ -121,13 +121,10 @@ def label_periode(awal, akhir):
     tahun = str(awal.year) if awal.year == akhir.year else f"{awal.year} - {akhir.year}"
     return bulan, tahun
 
-def buat_excel(lembar, rekap=None):
-    """lembar: daftar dict (nama, unit_label, bulan, tahun, grup, pengesah, gabungan).
-    rekap (opsional): dict untuk tab pertama berisi rekap total seluruh berkas."""
+def buat_excel(lembar):
+    """lembar: daftar dict (nama, unit_label, bulan, tahun, grup, pengesah, gabungan)."""
     wb = Workbook()
     wb.remove(wb.active)
-    if rekap:
-        _isi_rekap(wb.create_sheet(f"Rekap {rekap['tahun']}"), rekap)
     for item in lembar:
         ws = wb.create_sheet(item["nama"][:31])
         _isi_sheet(ws, item)

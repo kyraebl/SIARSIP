@@ -1,0 +1,13 @@
+<div class="sb-user">
+  <div class="sb-user-row">
+    <div class="sb-avatar" aria-hidden="true">{{ request.user.username|slice:":1"|upper }}</div>
+    <div class="sb-user-text">
+      <p class="sb-user-name">{{ request.user.get_full_name|default:request.user.username }}</p>
+      <p class="sb-user-role">{{ request.user.unit_kerja|default:"Admin" }}</p>
+    </div>
+  </div>
+  <form method="post" action="{% url 'logout' %}">
+    {% csrf_token %}
+    <button type="submit" class="sb-logout">Keluar</button>
+  </form>
+</div>

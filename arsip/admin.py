@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.core.exceptions import PermissionDenied
-from django.db.models import Max, Min
+from django.db.models import Max, Min, Q
 from django.shortcuts import render
 from django.template.response import TemplateResponse
 from django.urls import path
@@ -16,16 +16,26 @@ from unfold.decorators import display
 from .importer import ImportGagal, proses_import, proses_import_inaktif
 from datetime import date
 from django.utils.formats import date_format
+from master.models import Kategori
 
 @admin.register(Arsip)
 class ArsipAdmin(ModelAdmin):
     list_display = ("kode_klasifikasi", "uraian", "tanggal", "jumlah",
                     "keterangan", "keamanan", "unit_kerja")
-    list_filter = ("unit_kerja", "keamanan", "keterangan")
-    search_fields = ("perihal", "nomor_surat", "uraian")
     readonly_fields = ("uraian",)
     list_before_template = "admin/arsip/panel_aktif.html"
 
+    def get_search_results(self, request, queryset, search_term):
+        term = search_term.strip()
+        if term:
+            queryset = queryset.filter(uraian__icontains=term)
+        return queryset, False
+
+    def lookup_allowed(self, lookup, value, *args, **kwargs):
+        if lookup == "kategori__kode":
+            return True
+        return super().lookup_allowed(lookup, value, *args, **kwargs)
+    
     def _rekap(self, request):
         """Tabel rekap yang sama dengan dashboard web."""
         semua = Arsip.objects.all()
@@ -108,11 +118,17 @@ class ArsipAdmin(ModelAdmin):
 
     def changelist_view(self, request, extra_context=None):
         batas = Arsip.objects.aggregate(a=Min("tanggal"), b=Max("tanggal"))
+        th = request.GET.get("tanggal__year", "")
+        tm = request.GET.get("tanggal__month", "")
         extra_context = {
             **(extra_context or {}),
             "export_units": UnitKerja.objects.order_by("id"),
             "export_dari": f"{batas['a']:%Y-%m}" if batas["a"] else "",
             "export_sampai": f"{batas['b']:%Y-%m}" if batas["b"] else "",
+            "pa_kategori": Kategori.objects.all(),
+            "pa_q": request.GET.get("q", ""),
+            "pa_kat": request.GET.get("kategori__kode", ""),
+            "pa_bulan": f"{th}-{int(tm):02d}" if th.isdigit() and tm.isdigit() else "",
         }
         return super().changelist_view(request, extra_context=extra_context)
 
@@ -130,10 +146,15 @@ class ArsipInaktifAdmin(ModelAdmin):
         "no_berkas_", "no_urut_", "kode", "indeks", "uraian", "tahun",
         "jumlah_", "asli_copy", "box", "keamanan", "lokasi_simpan_", "bagian",
     )
-    list_filter = ("unit_kerja", "tahun")
-    search_fields = ("kode", "indeks", "uraian")
+    list_before_template = "admin/arsip/panel_inaktif.html"
 
-    list_before_template = "admin/arsip/export_panel_inaktif.html"
+    def get_search_results(self, request, queryset, search_term):
+        term = search_term.strip()
+        if term:
+            queryset = queryset.filter(
+                Q(uraian__icontains=term) | Q(kode__icontains=term) | Q(indeks__icontains=term)
+            )
+        return queryset, False
 
     def get_urls(self):
         custom = [
@@ -168,6 +189,9 @@ class ArsipInaktifAdmin(ModelAdmin):
             **(extra_context or {}),
             "export_units": UnitKerja.objects.order_by("id"),
             "export_tahun": ArsipInaktif.objects.order_by("-tahun").values_list("tahun", flat=True).distinct(),
+            "pa_q": request.GET.get("q", ""),
+            "pa_unit": request.GET.get("unit_kerja", ""),
+            "pa_tahun": request.GET.get("tahun", ""),
         }
         return super().changelist_view(request, extra_context=extra_context)
 

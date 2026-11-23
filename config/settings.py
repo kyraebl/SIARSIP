@@ -32,7 +32,8 @@ ALLOWED_HOSTS = ['10.103.34.89', 'siarsip.web.id', '.vercel.app', 'localhost', '
 
 CSRF_TRUSTED_ORIGINS = [
     'http://10.103.34.89:8000',
-    'http://siarsip.dsdan', 
+    'http://siarsip.dsdan',
+    'https://*.vercel.app',
 ]
 
 # App Definistions
@@ -163,6 +164,7 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+WHITENOISE_USE_FINDERS = True
 
 USE_GDRIVE = config("USE_GDRIVE", default=False, cast=bool)
 GDRIVE_CLIENT_ID = config("GDRIVE_CLIENT_ID", default="")
@@ -212,14 +214,16 @@ UNFOLD = {
                     {
                         "title": "Daftar Arsip Aktif",
                         "icon": "description",
-                        "link": reverse_lazy("arsip_list"),
-                        "active": lambda request: False,
+                        "link": reverse_lazy("admin:arsip_arsip_changelist"),
+                        "active": lambda request: (
+                            request.path.startswith(str(reverse_lazy("admin:arsip_arsip_changelist")))
+                            and request.path != str(reverse_lazy("admin:arsip_arsip_dashboard"))
+                        ),
                     },
                     {
                         "title": "Daftar Arsip Inaktif",
                         "icon": "inventory_2",
-                        "link": reverse_lazy("arsip_inaktif_list"),
-                        "active": lambda request: False,
+                        "link": reverse_lazy("admin:arsip_arsipinaktif_changelist"),
                     },
                     {
                         "title": "Website",
