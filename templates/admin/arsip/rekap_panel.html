@@ -8,7 +8,7 @@
     background: #fff; border: 1px solid #cbd5e1; border-radius: .5rem;
   }
   .rk-filter select:focus { outline: none; border-color: #2A55A8; box-shadow: 0 0 0 2px #B9D1E8; }
-  .rk-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; align-items: start; margin-bottom: 1.5rem; }
+  .rk-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2rem; align-items: start; margin-bottom: 2rem; }
   .rk-full { grid-column: 1 / -1; }
   @media (max-width: 1023px) { .rk-grid { grid-template-columns: minmax(0, 1fr); } }
   .rk-box { overflow-x: auto; background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem; }
@@ -23,24 +23,81 @@
   .rk-table tfoot { font-weight: 600; color: #1e3a8a; background: #eff6ff; border-top: 2px solid #bfdbfe; }
   .rk-table tfoot tr:first-child { border-bottom: 1px solid #e2e8f0; }
   .rk-table tfoot tr:last-child { background: #dbeafe; }
+  .rk-hero { margin-bottom: 2rem; padding: 2rem; background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem; }
+  .rk-halo { margin: 0; font-size: 1.25rem; font-weight: 600; color: #0f172a; }
+  .rk-hero-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.5rem; margin-top: 1.5rem; }
+  .rk-stats { display: grid; flex: 1; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; max-width: 36rem; margin: 0; }
+  .rk-stat { padding: 1.25rem ; background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem; }
+  .rk-stat dt { margin: 0; font-size: .875rem; color: #1e293b; }
+  .rk-stat dd { margin: .25rem 0 0; font-size: 1.875rem; font-weight: 700; font-variant-numeric: tabular-nums; color: #0f172a; }
+  .rk-right { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+  .rk-exp { position: relative; }
+  .rk-exp summary { display: inline-flex; align-items: center; gap: .5rem; height: 2.5rem; padding: 0 1rem; font-size: .875rem; font-weight: 600; color: #fff; list-style: none; cursor: pointer; background: #2A55A8; border-radius: .5rem; }
+  .rk-exp summary::-webkit-details-marker { display: none; }
+  .rk-exp summary:hover { background: #234A9A; }
+  .rk-exp-panel { position: absolute; right: 0; z-index: 30; width: 20rem; max-width: 90vw; margin-top: .5rem; padding: 1rem; background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem; box-shadow: 0 10px 24px rgba(15, 23, 42, .12); }
+  .rk-exp-panel label { display: block; margin-bottom: .35rem; font-size: .75rem; font-weight: 500; color: #0f172a; }
+  .rk-exp-panel select { width: 100%; margin-bottom: .75rem; padding: .45rem .75rem; font-size: .875rem; color: #334155; background: #fff; border: 1px solid #cbd5e1; border-radius: .5rem; }
+  .rk-exp-panel p { margin: 0 0 .75rem; font-size: .75rem; color: #475569; }
+  .rk-exp-panel button { width: 100%; height: 2.5rem; font-size: .875rem; font-weight: 600; color: #fff; cursor: pointer; background: #2A55A8; border: 0; border-radius: .5rem; }
 </style>
 
-<div class="rk-top">
-  <h2>Rekap total berkas</h2>
-  <form method="get" action="{{ request.path }}" class="rk-filter">
-    {% if rekap_bulan %}<input type="hidden" name="bulan" value="{{ rekap_bulan }}">{% endif %}
-    <label for="rk-tahun">Tahun</label>
-    <select id="rk-tahun" name="tahun" onchange="this.form.submit()">
-      {% for t in rekap_pilihan_tahun %}<option value="{{ t }}"{% if t == rekap_tahun %} selected{% endif %}>{{ t }}</option>{% endfor %}
-    </select>
-  </form>
+<div class="rk-hero">
+  <p class="rk-halo">Halo, {% firstof request.user.get_full_name request.user.username %}!</p>
+  <div class="rk-hero-row">
+    <dl class="rk-stats">
+      {% for label, value in rekap_stats %}
+      <div class="rk-stat">
+        <dt>{{ label }}</dt>
+        <dd>{{ value }}</dd>
+      </div>
+      {% endfor %}
+    </dl>
+
+    <div class="rk-right">
+      <form method="get" action="{{ request.path }}" class="rk-filter">
+        {% if rekap_bulan %}<input type="hidden" name="bulan" value="{{ rekap_bulan }}">{% endif %}
+        <label for="rk-tahun">Tahun</label>
+        <select id="rk-tahun" name="tahun" onchange="this.form.submit()">
+          {% for t in rekap_pilihan_tahun %}<option value="{{ t }}"{% if t == rekap_tahun %} selected{% endif %}>{{ t }}</option>{% endfor %}
+        </select>
+      </form>
+
+      <details class="rk-exp">
+        <summary>
+          Export rekap
+          <svg width="16" height="16" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+        </summary>
+        <div class="rk-exp-panel">
+          <form method="get" action="{% url 'rekap_export' %}">
+            <label for="x-tahun">Tahun</label>
+            <select id="x-tahun" name="tahun">
+              {% for t in rekap_pilihan_tahun %}<option value="{{ t }}"{% if t == rekap_tahun %} selected{% endif %}>{{ t }}</option>{% endfor %}
+            </select>
+            <label for="x-bulan">Bulan rekap</label>
+            <select id="x-bulan" name="bulan">
+              <option value="">Januari - Desember</option>
+              {% for nama in rekap_nama_bulan %}<option value="{{ forloop.counter }}"{% if rekap_bulan == forloop.counter %} selected{% endif %}>{{ nama }}</option>{% endfor %}
+            </select>
+            <label for="x-tipe">Tipe file</label>
+            <select id="x-tipe" name="tipe">
+              <option value="excel">Excel (.xlsx)</option>
+              <option value="pdf">PDF (.pdf)</option>
+            </select>
+            <p>Berisi 4 tabel: per bagian, klasifikasi, jenis, dan sifat. Bulan hanya berlaku untuk klasifikasi, jenis, dan sifat.</p>
+            <button type="submit" onclick="this.closest('details').open = false">Download</button>
+          </form>
+        </div>
+      </details>
+    </div>
+  </div>
 </div>
 
 <div class="rk-grid">
   {% for t in rekap_tabel %}
   <section id="rekap-{{ t.uid }}"{% if t.penuh %} class="rk-full"{% endif %}>
     <div class="rk-top">
-      <h2 style="font-size:1rem">{{ t.judul }}</h2>
+      <h2>{{ t.judul }}</h2>
       {% if t.filter_bulan %}
       <form method="get" action="{{ request.path }}#rekap-{{ t.uid }}" class="rk-filter">
         <input type="hidden" name="tahun" value="{{ rekap_tahun }}">

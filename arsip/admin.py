@@ -14,6 +14,8 @@ from .models import Arsip, ArsipInaktif
 from .views import _tahun, rekap_bagian, rekap_jenis_sifat, rekap_klasifikasi
 from unfold.decorators import display
 from .importer import ImportGagal, proses_import, proses_import_inaktif
+from datetime import date
+from django.utils.formats import date_format
 
 @admin.register(Arsip)
 class ArsipAdmin(ModelAdmin):
@@ -22,7 +24,7 @@ class ArsipAdmin(ModelAdmin):
     list_filter = ("unit_kerja", "keamanan", "keterangan")
     search_fields = ("perihal", "nomor_surat", "uraian")
     readonly_fields = ("uraian",)
-    list_before_template = "admin/arsip/export_panel.html"
+    list_before_template = "admin/arsip/panel_aktif.html"
 
     def _rekap(self, request):
         """Tabel rekap yang sama dengan dashboard web."""
@@ -41,6 +43,13 @@ class ArsipAdmin(ModelAdmin):
                     "baris": [(b["unit"].singkatan, b[baris]) for b in data["baris"]],
                     "jumlah": data["jumlah"], "total_semua": data["total_semua"], **extra}
 
+        today = date.today()
+        rekap_stats = [
+            ("Total arsip", semua.count()),
+            (f"Arsip bulan ini ({date_format(today, 'F Y')})",
+             semua.filter(tanggal__year=today.year, tanggal__month=today.month).count()),
+        ]
+
         return {
             "rekap_tabel": [
                 tabel("bagian", "Total berkas per bagian", None, [b.title() for b in BULAN], "bulan", bag,
@@ -52,6 +61,7 @@ class ArsipAdmin(ModelAdmin):
                 tabel("sifat", "Total berkas per sifat", "Sifat", js["sifat"]["kolom"], "nilai",
                       js["sifat"], filter_bulan=True),
             ],
+            "rekap_stats": rekap_stats,
             "rekap_tahun": tahun,
             "rekap_pilihan_tahun": pilihan_tahun,
             "rekap_bulan": bulan,

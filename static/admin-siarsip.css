@@ -147,3 +147,31 @@ div:has(> #result_list) {
 #nav-sidebar h2 {
   pointer-events: none;
 }
+
+/* Efek transisi, disamakan dengan halaman web */
+@keyframes siarsip-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+#main { animation: siarsip-fade-up .38s ease-out backwards; }
+.rk-table tbody tr { animation: siarsip-fade-up .28s ease-out backwards; }
+
+.rk-stat { transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease; }
+.rk-stat:hover { transform: translateY(-2px); border-color: #B9D1E8; box-shadow: 0 6px 16px rgba(35, 74, 154, .06); }
+
+.rk-exp summary, .rk-exp-panel button { transition: background-color .18s ease, transform .18s ease; }
+.rk-exp summary:hover { transform: translateY(-1px); }
+.rk-exp summary:active, .rk-exp-panel button:active { transform: scale(.98); }
+
+#nav-sidebar-inner ul li a { transition: background-color .18s ease, color .18s ease, transform .18s ease; }
+#nav-sidebar-inner ul li a:hover { transform: translateX(2px); }
+
+/* Buka tutup sidebar admin */
+.sb-t-active { transition: opacity .25s ease, transform .25s ease; }
+.sb-t-from { opacity: 0; transform: translateX(-12px); }
+.sb-t-to { opacity: 1; transform: translateX(0); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}

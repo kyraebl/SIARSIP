@@ -135,6 +135,14 @@
           animation: siarsip-modal-in 0.24s ease-out both;
       }
 
+      body.sb-anim #sidebar {
+          transition: transform 0.28s ease, visibility 0.28s;
+      }
+
+      body.sb-anim .sb-shift {
+          transition: padding-left 0.28s ease;
+      }
+
       @media (prefers-reduced-motion: reduce) {
           *, 
           *::before, 
@@ -253,8 +261,8 @@
 {% block body %}
 <a href="#konten" class="sr-only rounded bg-white px-3 py-2 text-sm font-medium text-blue-900 focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50">Lompat ke konten</a>
 {% with u=request.resolver_match.url_name %}
-<aside class="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-slate-200 bg-white md:flex"
-       :style="sb ? '' : 'display:none'">
+<aside id="sidebar" class="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-slate-200 bg-white md:flex"
+       :style="sb ? '' : 'transform: translateX(-100%); visibility: hidden'">
   <div class="flex h-[65px] items-center gap-3 border-b border-slate-200 px-5">
     <img src="{% static 'logo-icon.png' %}" alt="Logo Dewan Sumber Daya Air Nasional" class="h-10 w-auto">
     <div class="leading-tight">
@@ -326,7 +334,7 @@
 </header>
 {% endwith %}
 
-<div class="md:pl-64" :style="sb ? '' : 'padding-left:0'">
+<div class="md:pl-64 sb-shift" :style="sb ? '' : 'padding-left:0'">
   <div class="hidden h-[65px] items-center gap-3 border-b border-slate-200 bg-white px-4 md:flex">
     <button type="button" @click="sb = !sb"
             :aria-label="sb ? 'Tutup menu navigasi' : 'Buka menu navigasi'" :aria-expanded="sb"
@@ -334,7 +342,7 @@
       <svg class="h-5 w-5" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M9.5 4.5v15"/></svg>
     </button>
     <span class="h-5 w-px bg-slate-200" aria-hidden="true"></span>
-    <p class="text-2xl font-bold leading-tight text-slate-900">{% block judul %}<span x-text="document.title"></span>{% endblock %}</p>
+    <p class="text-xl font-bold leading-tight text-slate-900">{% block judul %}<span x-text="document.title"></span>{% endblock %}</p>
   </div>
   <main id="konten" class="mx-auto max-w-7xl p-6 lg:p-8">
     {% block content %}{% endblock %}
@@ -342,5 +350,10 @@
 <div id="modal-root"></div>
 {% endblock %}
 {% block scripts %}{% endblock %}
+<script>
+  window.addEventListener('load', function () {
+    requestAnimationFrame(function () { document.body.classList.add('sb-anim'); });
+  });
+</script>
 </body>
 </html>

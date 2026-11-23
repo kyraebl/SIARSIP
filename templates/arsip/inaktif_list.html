@@ -2,86 +2,90 @@
 {% block title %}Daftar Arsip Inaktif{% endblock %}
 {% block judul %}Daftar Arsip Inaktif{% endblock %}
 {% block content %}
-<div class="mb-6 flex flex-wrap items-end justify-between gap-4 md:justify-end">
-  <h1 class="text-2xl font-bold text-slate-900 md:hidden">Daftar Arsip Inaktif</h1>
-  <div class="flex flex-wrap gap-3">
-    <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false">
-      <button type="button" class="btn btn-outline" @click="open = !open" :aria-expanded="open">
-        Export
-        <svg class="h-4 w-4" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
-      </button>
-      <div x-show="open" x-cloak class="absolute right-0 z-30 mt-2 w-80 max-w-[90vw] rounded-xl border border-slate-200 bg-white p-4 shadow-lg">
-        <form method="get" action="{% url 'arsip_inaktif_export' %}" class="space-y-3">
-          {% if units %}
-          <div>
-            <label for="x-bagian" class="lbl">Bagian</label>
-            <select id="x-bagian" name="bagian" class="field !h-10">
-              <option value="semua">Semua bagian</option>
-              {% for u in units %}<option value="{{ u.pk }}">{{ u.nama }}</option>{% endfor %}
-            </select>
-          </div>
-          {% endif %}
-          <div>
-            <label for="x-tahun" class="lbl">Tahun</label>
-            <select id="x-tahun" name="tahun" class="field !h-10">
-              <option value="">Semua tahun</option>
-              {% for t in tahun_list %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
-            </select>
-          </div>
-          <div>
-            <label for="x-mode" class="lbl">Format</label>
-            <select id="x-mode" name="mode" class="field !h-10">
-              <option value="per_tahun">Satu tab per tahun</option>
-              <option value="gabung">Semua tahun dalam satu tab</option>
-            </select>
-          </div>
-          <div>
-            <label for="x-tipe" class="lbl">Tipe file</label>
-            <select id="x-tipe" name="tipe" class="field !h-10">
-              <option value="excel">Excel (.xlsx)</option>
-              <option value="pdf">PDF (.pdf)</option>
-            </select>
-          </div>
-          <p class="text-xs text-slate-600">Isi file mengikuti pilihan di kotak ini, bukan filter di halaman.</p>
-          <button type="submit" class="btn btn-primary w-full" @click="open = false">Download</button>
-        </form>
+<h1 class="mb-4 text-2xl font-bold text-slate-900 md:hidden">Daftar Arsip Inaktif</h1>
+
+<div class="rounded-xl border border-slate-200 bg-white p-5 lg:p-6">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <p class="text-lg font-semibold text-slate-900">Arsip Inaktif {% if request.user.unit_kerja %}Bagian {{ request.user.unit_kerja.nama }}{% else %}Semua Bagian{% endif %}</p>
+    <div class="flex flex-wrap gap-3">
+      <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false">
+        <button type="button" class="btn btn-outline" @click="open = !open" :aria-expanded="open">
+          Export
+          <svg class="h-4 w-4" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+        </button>
+        <div x-show="open" x-cloak class="absolute right-0 z-30 mt-2 w-80 max-w-[90vw] rounded-xl border border-slate-200 bg-white p-4 shadow-lg">
+          <form method="get" action="{% url 'arsip_inaktif_export' %}" class="space-y-3">
+            {% if units %}
+            <div>
+              <label for="x-bagian" class="lbl">Bagian</label>
+              <select id="x-bagian" name="bagian" class="field !h-10">
+                <option value="semua">Semua bagian</option>
+                {% for u in units %}<option value="{{ u.pk }}">{{ u.nama }}</option>{% endfor %}
+              </select>
+            </div>
+            {% endif %}
+            <div>
+              <label for="x-tahun" class="lbl">Tahun</label>
+              <select id="x-tahun" name="tahun" class="field !h-10">
+                <option value="">Semua tahun</option>
+                {% for t in tahun_list %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+              </select>
+            </div>
+            <div>
+              <label for="x-mode" class="lbl">Format</label>
+              <select id="x-mode" name="mode" class="field !h-10">
+                <option value="per_tahun">Satu tab per tahun</option>
+                <option value="gabung">Semua tahun dalam satu tab</option>
+              </select>
+            </div>
+            <div>
+              <label for="x-tipe" class="lbl">Tipe file</label>
+              <select id="x-tipe" name="tipe" class="field !h-10">
+                <option value="excel">Excel (.xlsx)</option>
+                <option value="pdf">PDF (.pdf)</option>
+              </select>
+            </div>
+            <p class="text-xs text-slate-600">Isi file mengikuti pilihan di kotak ini, bukan filter di halaman.</p>
+            <button type="submit" class="btn btn-primary w-full" @click="open = false">Download</button>
+          </form>
+        </div>
       </div>
+      <button type="button" hx-get="{% url 'arsip_inaktif_import' %}" hx-target="#modal-root" class="btn btn-outline">Import Excel</button>
+      <button type="button" hx-get="{% url 'arsip_inaktif_tambah' %}" hx-target="#modal-root" class="btn btn-primary">
+        <svg class="h-4 w-4" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+        Tambah Arsip
+      </button>
     </div>
-    <button type="button" hx-get="{% url 'arsip_inaktif_import' %}" hx-target="#modal-root" class="btn btn-outline">Import Excel</button>
-    <button type="button" hx-get="{% url 'arsip_inaktif_tambah' %}" hx-target="#modal-root" class="btn btn-primary">
-      <svg class="h-4 w-4" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-      Tambah Arsip
-    </button>
   </div>
+
+  <form id="filter-inaktif" role="search" aria-label="Filter daftar arsip inaktif" class="mt-5 flex flex-wrap items-end gap-3"
+        hx-get="{% url 'arsip_inaktif_list' %}" hx-target="#tabel" hx-indicator="#tabel" hx-sync="this:replace"
+        hx-trigger="input delay:300ms, change, submit">
+    <div class="min-w-[14rem] grow basis-56">
+      <label for="f-q" class="lbl">Cari</label>
+      <input id="f-q" type="search" name="q" value="{{ q }}" placeholder="Kode, indeks, atau uraian" class="field !h-10">
+    </div>
+    {% if units %}
+    <div>
+      <label for="f-bagian" class="lbl">Bagian</label>
+      <select id="f-bagian" name="bagian" class="field !h-10 !w-auto">
+        <option value="semua">Semua bagian</option>
+        {% for u in units %}<option value="{{ u.pk }}"{% if bagian == u.pk|stringformat:"s" %} selected{% endif %}>{{ u.nama }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    <div>
+      <label for="f-tahun" class="lbl">Tahun</label>
+      <select id="f-tahun" name="tahun" class="field !h-10 !w-40">
+        <option value="">Semua tahun</option>
+        {% for t in tahun_list %}
+        <option value="{{ t }}"{% if tahun == t|stringformat:"s" %} selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="sr-only" tabindex="-1">Cari</button>
+  </form>
 </div>
 
-<form id="filter-inaktif" role="search" aria-label="Filter daftar arsip inaktif" class="mb-5 flex flex-wrap items-end gap-3"
-      hx-get="{% url 'arsip_inaktif_list' %}" hx-target="#tabel" hx-indicator="#tabel" hx-sync="this:replace"
-      hx-trigger="input delay:300ms, change, submit">
-  <div class="min-w-[14rem] grow basis-56">
-    <label for="f-q" class="lbl">Cari</label>
-    <input id="f-q" type="search" name="q" value="{{ q }}" placeholder="Kode, indeks, atau uraian" class="field !h-10">
-  </div>
-  {% if units %}
-  <div>
-    <label for="f-bagian" class="lbl">Bagian</label>
-    <select id="f-bagian" name="bagian" class="field !h-10 !w-auto">
-      <option value="semua">Semua bagian</option>
-      {% for u in units %}<option value="{{ u.pk }}"{% if bagian == u.pk|stringformat:"s" %} selected{% endif %}>{{ u.nama }}</option>{% endfor %}
-    </select>
-  </div>
-  {% endif %}
-  <div>
-    <label for="f-tahun" class="lbl">Tahun</label>
-    <select id="f-tahun" name="tahun" class="field !h-10 !w-40">
-      <option value="">Semua tahun</option>
-      {% for t in tahun_list %}
-      <option value="{{ t }}"{% if tahun == t|stringformat:"s" %} selected{% endif %}>{{ t }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <button type="submit" class="sr-only" tabindex="-1">Cari</button>
-</form>
-
-<div id="tabel">{% include "arsip/_tabel_inaktif.html" %}</div>
+<div id="tabel" class="mt-6">{% include "arsip/_tabel_inaktif.html" %}</div>
 {% endblock %}

@@ -204,12 +204,6 @@ UNFOLD = {
             {
                 "items": [
                     {
-                        "title": "Website",
-                        "icon": "language",
-                        "link": reverse_lazy("dashboard"),
-                        "active": lambda request: False,
-                    },
-                    {
                         "title": "Dashboard",
                         "icon": "home",
                         "link": reverse_lazy("admin:arsip_arsip_dashboard"),
@@ -218,16 +212,20 @@ UNFOLD = {
                     {
                         "title": "Daftar Arsip Aktif",
                         "icon": "description",
-                        "link": reverse_lazy("admin:arsip_arsip_changelist"),
-                        "active": lambda request: (
-                            request.path.startswith(str(reverse_lazy("admin:arsip_arsip_changelist")))
-                            and request.path != str(reverse_lazy("admin:arsip_arsip_dashboard"))
-                        ),
+                        "link": reverse_lazy("arsip_list"),
+                        "active": lambda request: False,
                     },
                     {
                         "title": "Daftar Arsip Inaktif",
                         "icon": "inventory_2",
-                        "link": reverse_lazy("admin:arsip_arsipinaktif_changelist"),
+                        "link": reverse_lazy("arsip_inaktif_list"),
+                        "active": lambda request: False,
+                    },
+                    {
+                        "title": "Website",
+                        "icon": "language",
+                        "link": reverse_lazy("dashboard"),
+                        "active": lambda request: False,
                     },
                 ],
             },

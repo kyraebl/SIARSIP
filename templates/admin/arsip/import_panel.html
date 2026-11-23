@@ -48,6 +48,11 @@
   .im-aksi { display: flex; justify-content: flex-end; margin-top: 1rem; }
 </style>
 
+{% if compact %}
+<p id="im-loading">Memproses file, mohon tunggu...</p>
+<div id="im-hasil"></div>
+{% else %}
+
 <div class="im-panel">
   <h3>{{ im_judul|default:"Import Excel (Daftar Isi Berkas)" }}</h3>
   <form id="im-form" method="post" enctype="multipart/form-data" action="{{ im_action|default:im_url_aktif }}" class="im-form">
@@ -69,6 +74,7 @@
   <p id="im-loading">Memproses file, mohon tunggu...</p>
   <div id="im-hasil"></div>
 </div>
+{% endif %}
 
 <script>
 (function () {
