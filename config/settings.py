@@ -180,6 +180,23 @@ STORAGES = {
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
 }
 
+USE_R2 = config("USE_R2", default=False, cast=bool)
+if USE_R2:
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "access_key": config("R2_ACCESS_KEY_ID"),
+            "secret_key": config("R2_SECRET_ACCESS_KEY"),
+            "bucket_name": config("R2_BUCKET_NAME"),
+            "endpoint_url": f"https://{config('R2_ACCOUNT_ID')}.r2.cloudflarestorage.com",
+            "region_name": "auto",
+            "signature_version": "s3v4",
+            "file_overwrite": False,
+            "querystring_auth": True,
+            "querystring_expire": 300,
+        },
+    }
+    
 MAILERS = {
     'default': {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',

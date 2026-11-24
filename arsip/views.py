@@ -525,6 +525,9 @@ def arsip_berkas(request, pk):
     if not a.berkas:
         raise Http404("Arsip ini belum punya berkas.")
 
+    if settings.USE_R2:
+        return redirect(a.berkas.url)
+
     if settings.USE_GDRIVE and not a.berkas.storage.ada(a.berkas.name):
         Arsip.objects.filter(pk=a.pk).update(berkas="")
         messages.error(request, "Berkas sudah dihapus dari Drive. Silakan unggah ulang.")

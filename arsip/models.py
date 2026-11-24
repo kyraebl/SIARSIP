@@ -4,6 +4,7 @@ import os
 import re
 import uuid
 
+from django.conf import settings
 from django.core.validators import FileExtensionValidator, RegexValidator
 from django.db import models
 from accounts.models import UnitKerja
@@ -96,35 +97,30 @@ class Arsip(models.Model):
             return f"{self.kategori.kode} {self.sub_kode}".strip()
         return f"{self.kategori.kode}{self.sub_kode}"
 
+    def _berkas_ada(self):
+        """True kalau soft file tersedia. Di R2 cukup cek field berkas terisi."""
+        if not self.berkas:
+            return False
+        if getattr(settings, "USE_R2", False):
+            return True
+        return os.path.exists(os.path.join(settings.MEDIA_ROOT, self.berkas.name))
+
     @property
     def catatan(self):
         """Daftar kekurangan data arsip: list of (kode, teks)."""
         c = []
         if self.kode_tujuan_id and not self.nomor_surat:
             c.append(("nomor", "Nomor surat belum keluar"))
-            
-        file_ada = False
-        if self.berkas:
-            import os
-            from django.conf import settings
-            full_path = os.path.join(settings.MEDIA_ROOT, self.berkas.name)
-            if os.path.exists(full_path):
-                file_ada = True
-                
-        if not file_ada:
+
+        if not self._berkas_ada():
             c.append(("berkas", "Soft file belum diunggah"))
-            
+
         return c
 
     @property
     def file_fisik_ada(self):
-        """Mengecek apakah file benar-benar ada di folder local"""
-        if not self.berkas:
-            return False
-        import os
-        from django.conf import settings
-        full_path = os.path.join(settings.MEDIA_ROOT, self.berkas.name)
-        return os.path.exists(full_path)
+        """Soft file ada? Lokal: dicek di folder media. R2: cukup field berkas terisi."""
+        return self._berkas_ada()
     
     @property
     def warna_baris(self):
