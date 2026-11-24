@@ -526,6 +526,10 @@ def arsip_berkas(request, pk):
         raise Http404("Arsip ini belum punya berkas.")
 
     if settings.USE_R2:
+        if not a.berkas.storage.exists(a.berkas.name):
+            Arsip.objects.filter(pk=a.pk).update(berkas="")
+            messages.error(request, "Berkas tidak ditemukan di penyimpanan. Silakan unggah ulang.")
+            return redirect("arsip_list")
         return redirect(a.berkas.url)
 
     if settings.USE_GDRIVE and not a.berkas.storage.ada(a.berkas.name):
