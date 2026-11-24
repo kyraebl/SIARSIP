@@ -10,4 +10,3 @@ client_secret*.json
 media/
 staticfiles/
 .vscode/
-django-storages[s3]

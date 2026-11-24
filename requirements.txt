@@ -17,3 +17,4 @@ whitenoise
 reportlab
 argon2-cffi
 django-axes
+django-storages[s3]
