@@ -256,7 +256,7 @@
   </script>
 </head>
 <body class="bg-slate-50 font-sans text-slate-700 antialiased" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-      x-data="{ sb: localStorage.getItem('sidebar') !== 'tutup' }"
+      x-data="{ sb: localStorage.getItem('sidebar') !== 'tutup', keluar: false }"
       x-init="$watch('sb', v => localStorage.setItem('sidebar', v ? 'buka' : 'tutup'))">
 {% block body %}
 <a href="#konten" class="sr-only rounded bg-white px-3 py-2 text-sm font-medium text-blue-900 focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50">Lompat ke konten</a>
@@ -306,10 +306,7 @@
         <p class="text-xs text-slate-500">{{ request.user.unit_kerja|default:"Admin" }}</p>
       </div>
     </div>
-    <form method="post" action="{% url 'logout' %}">
-      {% csrf_token %}
-    <button class="w-full rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 hover:border-red-400 hover:bg-red-100">Keluar</button>
-    </form>
+    <button type="button" @click="keluar = true" class="w-full rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 hover:border-red-400 hover:bg-red-100">Keluar</button>
   </div>
 </aside>
 
@@ -326,10 +323,7 @@
     {% if request.user.is_staff %}
     <a href="{% url 'admin:index' %}" class="whitespace-nowrap border-b-2 border-transparent py-2.5 text-slate-600">Kelola</a>
     {% endif %}
-    <form method="post" action="{% url 'logout' %}" class="ml-auto">
-      {% csrf_token %}
-      <button class="whitespace-nowrap border-b-2 border-transparent py-2.5 text-slate-500">Keluar</button>
-    </form>
+    <button type="button" @click="keluar = true" class="ml-auto whitespace-nowrap border-b-2 border-transparent py-2.5 text-slate-500">Keluar</button>
   </nav>
 </header>
 {% endwith %}
@@ -346,8 +340,27 @@
   </div>
   <main id="konten" class="mx-auto max-w-7xl p-6 lg:p-8">
     {% block content %}{% endblock %}
+  </main>
 </div>
 <div id="modal-root"></div>
+
+<div x-cloak x-show="keluar" x-transition.opacity
+     @keydown.escape.window="keluar = false" @click.self="keluar = false"
+     class="fixed inset-0 flex items-center justify-center bg-slate-900/50 p-4" style="z-index:60">
+  <div role="alertdialog" aria-modal="true" aria-labelledby="judul-keluar" x-trap.noscroll="keluar"
+       class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
+    <h2 id="judul-keluar" class="text-lg font-semibold text-slate-900">Anda yakin ingin keluar?</h2>
+    <p class="mt-2 text-sm text-slate-600">Sesi akan diakhiri dan perlu login ulang untuk masuk kembali.</p>
+    <div class="mt-6 flex gap-3">
+      <button type="button" @click="keluar = false"
+              class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Batal</button>
+      <form method="post" action="{% url 'logout' %}" class="flex-1">
+        {% csrf_token %}
+        <button class="w-full rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700">Ya, keluar</button>
+      </form>
+    </div>
+  </div>
+</div>
 {% endblock %}
 {% block scripts %}{% endblock %}
 <script>

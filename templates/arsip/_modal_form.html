@@ -10,9 +10,9 @@
         x-ref="form" @input="update()" @change="update()" x-init="$nextTick(() => update())"
         class="flex max-h-[92vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl">
     {% csrf_token %}
-
+    {% if pilih_unit %}<input type="hidden" name="unit" value="{{ unit.pk }}">{% endif %}
     <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-      <h2 id="modal-judul" class="text-lg font-semibold text-slate-900">{{ judul }}</h2>
+    <h2 id="modal-judul" class="text-lg font-semibold text-slate-900">{{ judul }}{% if pilih_unit %} · {{ unit.singkatan }}{% endif %}</h2>
       <button type="button" @click="close()" aria-label="Tutup" class="-mr-2 rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700">
         <svg class="h-5 w-5" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>

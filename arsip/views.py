@@ -42,6 +42,22 @@ def bukan_atasan(view):
         return view(request, *a, **kw)
     return _w
 
+def _unit_tujuan(request, user):
+    """Unit tujuan data baru. Staf: unitnya sendiri. Admin tanpa unit: dipilih lewat parameter unit."""
+    if user.unit_kerja:
+        return user.unit_kerja
+    if user.is_admin_role:
+        pk = request.POST.get("unit") or request.GET.get("unit")
+        if pk and pk.isdigit():
+            return UnitKerja.objects.filter(pk=pk).first()
+    return None
+
+def _modal_pilih_unit(request, judul):
+    return render(request, "arsip/_modal_pilih_unit.html", {
+        "judul": judul, "url": request.path,
+        "unit_list": UnitKerja.objects.order_by("singkatan"),
+    })
+
 def susun_tabel(qs):
     """Kelompokkan per kategori > kode klasifikasi, lengkap dengan No. Berkas dan No. Item."""
     grup = []
@@ -399,6 +415,33 @@ def arsip_inaktif_form(request, pk=None):
         return redirect("arsip_inaktif_list")
     user = request.user
     obj = get_object_or_404(ArsipInaktif.objects.untuk(user), pk=pk) if pk else None
+    unit = obj.unit_kerja if obj else _unit_tujuan(request, user)
+    if not unit:
+        if user.is_admin_role:
+            return _modal_pilih_unit(request, "Tambah Arsip Inaktif")
+        messages.error(request, "Akun ini belum punya unit kerja. Atur dulu lewat halaman admin.")
+        return HttpResponse(headers={"HX-Redirect": reverse("arsip_inaktif_list")})
+
+    form = ArsipInaktifForm(request.POST or None, instance=obj)
+    if request.method == "POST" and form.is_valid():
+        a = form.save(commit=False)
+        if not obj:
+            a.unit_kerja = unit
+        a.save()
+        messages.success(request, "Arsip inaktif berhasil disimpan.")
+        return HttpResponse(headers={"HX-Refresh": "true"})
+    judul = "Ubah Arsip Inaktif" if obj else "Tambah Arsip Inaktif"
+    return render(request, "arsip/_modal_form_inaktif.html", {
+        "form": form, "judul": judul, "pilih_unit": not user.unit_kerja and not obj, "unit": unit,
+    })
+
+@login_required
+@bukan_atasan
+def arsip_inaktif_form(request, pk=None):
+    if not request.headers.get("HX-Request"):
+        return redirect("arsip_inaktif_list")
+    user = request.user
+    obj = get_object_or_404(ArsipInaktif.objects.untuk(user), pk=pk) if pk else None
     if not obj and not user.unit_kerja:
         messages.error(request, "Akun ini belum punya unit kerja. Atur dulu lewat halaman admin.")
         return HttpResponse(headers={"HX-Redirect": reverse("arsip_inaktif_list")})
@@ -428,19 +471,23 @@ def arsip_inaktif_import(request):
     if not request.headers.get("HX-Request"):
         return redirect("arsip_inaktif_list")
     user = request.user
-    if not user.unit_kerja:
+    unit = _unit_tujuan(request, user)
+    if not unit:
+        if user.is_admin_role:
+            return _modal_pilih_unit(request, "Import Arsip Inaktif dari Excel")
         messages.error(request, "Akun ini belum punya unit kerja, jadi belum bisa import.")
         return HttpResponse(headers={"HX-Redirect": reverse("arsip_inaktif_list")})
 
     if request.method != "POST":
-        return render(request, "arsip/_modal_import_inaktif.html", {"max_mb": settings.MAX_UPLOAD_MB})
+        return render(request, "arsip/_modal_import_inaktif.html", {
+            "max_mb": settings.MAX_UPLOAD_MB, "unit": unit, "pilih_unit": not user.unit_kerja})
 
     form = ImportExcelForm(request.POST, request.FILES)
     if not form.is_valid():
         return render(request, "arsip/_hasil_import_inaktif.html", {"error": form.errors["file"][0]})
     simpan = request.POST.get("simpan") == "1"
     try:
-        hasil = proses_import_inaktif(form.cleaned_data["file"], user, simpan=simpan)
+        hasil = proses_import_inaktif(form.cleaned_data["file"], user, simpan=simpan, unit=unit)
     except ImportGagal as e:
         return render(request, "arsip/_hasil_import_inaktif.html", {"error": str(e)})
     return render(request, "arsip/_hasil_import_inaktif.html", {"hasil": hasil, "simpan": simpan})
@@ -479,23 +526,25 @@ def arsip_form(request, pk=None):
         return redirect("dashboard")
 
     user = request.user
-    if not user.unit_kerja:
+    obj = get_object_or_404(Arsip.objects.untuk(user), pk=pk) if pk else None
+    unit = obj.unit_kerja if obj else _unit_tujuan(request, user)
+    if not unit:
+        if user.is_admin_role:
+            return _modal_pilih_unit(request, "Tambah Arsip")
         messages.error(request, "Akun ini belum punya unit kerja. Atur dulu lewat halaman admin.")
         return HttpResponse(headers={"HX-Redirect": reverse("dashboard")})
 
-    obj = get_object_or_404(Arsip.objects.untuk(user), pk=pk) if pk else None
-    berkas_lama = obj.berkas.name if obj else ""   
-    unit = obj.unit_kerja if obj else user.unit_kerja
+    berkas_lama = obj.berkas.name if obj else ""
     form = ArsipForm(request.POST or None, request.FILES or None, instance=obj, unit=unit)
 
     if request.method == "POST" and form.is_valid():
         a = form.save(commit=False)
         if not obj:
-            a.unit_kerja = user.unit_kerja
+            a.unit_kerja = unit
             a.created_by = user
         a.save()
         if berkas_lama and berkas_lama != a.berkas.name:
-            a.berkas.storage.delete(berkas_lama)   
+            a.berkas.storage.delete(berkas_lama)
         messages.success(request, f"Arsip berhasil disimpan di bulan {date_format(a.tanggal, 'F Y')}.")
         return HttpResponse(headers={"HX-Refresh": "true"})
 
@@ -507,6 +556,8 @@ def arsip_form(request, pk=None):
                        for t in KodeTujuan.objects.all()},
         "kategori_map": {str(k.pk): k.kode for k in Kategori.objects.all()},
         "bebas": form.bebas,
+        "pilih_unit": not user.unit_kerja and not obj,
+        "unit": unit,
     }
     return render(request, "arsip/_modal_form.html", ctx)
 
@@ -561,12 +612,16 @@ def arsip_import(request):
         return redirect("dashboard")
 
     user = request.user
-    if not user.unit_kerja:
+    unit = _unit_tujuan(request, user)
+    if not unit:
+        if user.is_admin_role:
+            return _modal_pilih_unit(request, "Import dari Excel")
         messages.error(request, "Akun ini belum punya unit kerja, jadi belum bisa import.")
         return HttpResponse(headers={"HX-Redirect": reverse("dashboard")})
 
     if request.method != "POST":
-        return render(request, "arsip/_modal_import.html", {"max_mb": settings.MAX_UPLOAD_MB})
+        return render(request, "arsip/_modal_import.html", {
+            "max_mb": settings.MAX_UPLOAD_MB, "unit": unit, "pilih_unit": not user.unit_kerja})
 
     form = ImportExcelForm(request.POST, request.FILES)
     if not form.is_valid():
@@ -574,10 +629,8 @@ def arsip_import(request):
 
     simpan = request.POST.get("simpan") == "1"
     try:
-        hasil = proses_import(form.cleaned_data["file"], user, simpan=simpan)
+        hasil = proses_import(form.cleaned_data["file"], user, simpan=simpan, unit=unit)
     except ImportGagal as e:
         return render(request, "arsip/_hasil_import.html", {"error": str(e)})
 
-    return render(request, "arsip/_hasil_import.html", {
-        "hasil": hasil, "simpan": simpan,
-    })
+    return render(request, "arsip/_hasil_import.html", {"hasil": hasil, "simpan": simpan})

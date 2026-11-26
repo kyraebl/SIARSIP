@@ -1,0 +1,20 @@
+<div x-data="{ close() { document.getElementById('modal-root').innerHTML = '' } }" x-trap.noscroll="true"
+     @keydown.escape.window="close()" @click.self="close()"
+     role="dialog" aria-modal="true" aria-labelledby="modal-judul"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+  <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+    <h2 id="modal-judul" class="text-lg font-semibold text-slate-900">{{ judul }}</h2>
+    <p class="mt-1 text-sm text-slate-600">Pilih bagian yang akan diisi.</p>
+    <div class="mt-4 space-y-2">
+      {% for u in unit_list %}
+      <button type="button" hx-get="{{ url }}?unit={{ u.pk }}" hx-target="#modal-root"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:border-blue-400 hover:bg-blue-50">
+        {{ u.singkatan }} <span class="font-normal text-slate-500">· {{ u.nama }}</span>
+      </button>
+      {% endfor %}
+    </div>
+    <div class="mt-5 flex justify-end">
+      <button type="button" @click="close()" class="btn border border-slate-300 bg-white font-medium text-slate-700 hover:bg-slate-50">Batal</button>
+    </div>
+  </div>
+</div>
